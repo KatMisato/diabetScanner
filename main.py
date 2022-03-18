@@ -267,6 +267,8 @@ def get_table_for_one_position(name, districts_data):
 
 
 def write_report(report_name_template, css_style_name, time_now, html_table):
+    if not html_table:
+        return
     try:
         with open(report_name_template.format(time_now.strftime("%Y_%m_%d_%H_%M_%S")), "w") as hs:
             hs.write(css_style_name)
