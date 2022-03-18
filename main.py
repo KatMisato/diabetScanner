@@ -42,6 +42,12 @@ DIABETES_SEND_EMAIL_PASSWORD = "Diabet.Scanner1"
 FULL_REPORT_NAME_TEMPLATE = "report_full_{0}.html"
 NEW_REPORT_NAME_TEMPLATE = "report_new_{0}.html"
 
+HEADER_HTML = """<!DOCTYPE html>
+          <html lang="ru"> 
+          <head>
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+          </head>"""
+
 CSS_STYLE_BASE = """<style> table {
           font-family: Arial, Helvetica, sans-serif;
           border-collapse: collapse;
@@ -64,7 +70,8 @@ CSS_STYLE_BASE = """<style> table {
           background-color: bg_color;
           color: white;
         }
-        </style>"""
+        </style>
+        <meta charset="utf-8">"""
 
 CSS_STYLE_FULL = CSS_STYLE_BASE.replace("bg_color", "#04AA6D")
 
@@ -95,8 +102,8 @@ def get_values_from_config():
         config_object = ConfigParser()
         config_object.read("config.ini")
         try:
-            config_positions = config_object["MAIN_CONFIG"]["POSITIONS"].split(", ")
-            config_districts = config_object["MAIN_CONFIG"]["DISTRICTS"].split(", ")
+            config_positions = config_object["MAIN_CONFIG"]["POSITIONS"].replace(' ', '').split(",")
+            config_districts = config_object["MAIN_CONFIG"]["DISTRICTS"].replace(' ', '').split(",")
             if "E-MAIL" in config_object["MAIN_CONFIG"]:
                 config_email = config_object["MAIN_CONFIG"]["E-MAIL"]
             if "SEND-FULL-REPORT" in config_object["MAIN_CONFIG"]:
@@ -270,7 +277,8 @@ def write_report(report_name_template, css_style_name, time_now, html_table):
     if not html_table:
         return
     try:
-        with open(report_name_template.format(time_now.strftime("%Y_%m_%d_%H_%M_%S")), "w") as hs:
+        with open(report_name_template.format(time_now.strftime("%Y_%m_%d_%H_%M_%S")), "w", encoding="utf-8") as hs:
+            hs.write(HEADER_HTML)
             hs.write(css_style_name)
             hs.writelines(html_table)
             hs.close()
@@ -293,6 +301,8 @@ def add_file_to_html(name_template, now_time):
 
 
 def send_email(receiver_email, html_text, now_time, send_full):
+    if not email:
+        return
     if (not html_text or not email) and (send_full is False):
         return
 
@@ -341,4 +351,4 @@ if __name__ == '__main__':
     write_report(NEW_REPORT_NAME_TEMPLATE, CSS_STYLE_NEW, now, new_table)
     send_email(email, new_table, now, send_full_report)
     print("process finished")
-    exit(0)
+
