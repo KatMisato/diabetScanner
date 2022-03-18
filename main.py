@@ -96,7 +96,7 @@ def init_config_with_default_values():
 def get_values_from_config():
     config_positions = DEFAULT_POSITIONS
     config_districts = DEFAULT_DISTRICTS
-    config_email = ""
+    config_emails = ""
     config_send_full_report = True
     if path.exists(CONFIG_FILE_NAME):
         config_object = ConfigParser()
@@ -105,7 +105,7 @@ def get_values_from_config():
             config_positions = config_object["MAIN_CONFIG"]["POSITIONS"].replace(' ', '').split(",")
             config_districts = config_object["MAIN_CONFIG"]["DISTRICTS"].replace(' ', '').split(",")
             if "E-MAIL" in config_object["MAIN_CONFIG"]:
-                config_email = config_object["MAIN_CONFIG"]["E-MAIL"]
+                config_emails = config_object["MAIN_CONFIG"]["E-MAIL"].replace(' ', '').split(",")
             if "SEND-FULL-REPORT" in config_object["MAIN_CONFIG"]:
                 config_send_full_report = config_object.getboolean("MAIN_CONFIG", "SEND-FULL-REPORT")
         except KeyError:
@@ -113,7 +113,7 @@ def get_values_from_config():
     else:
         init_config_with_default_values()
 
-    return config_positions, config_districts, config_email, config_send_full_report
+    return config_positions, config_districts, config_emails, config_send_full_report
 
 
 def clear_address(address):
@@ -214,6 +214,10 @@ def print_table_headers(h1_name, headers):
     return html_headers
 
 
+def check_district_name(district_name, filter_data):
+    return district_name.replace(' ', '') in filter_data
+
+
 def get_table_for_one_position(name, districts_data):
     url = BASE_URL.format(request.quote(name)).strip()
     print("get data for {0} ...".format(name))
@@ -246,7 +250,7 @@ def get_table_for_one_position(name, districts_data):
 
                 table_diff = ""
                 for district in result["districts"]:
-                    if district["name"] in districts_data:
+                    if check_district_name(district["name"], districts_data):
                         res_table += add_district_to_table(district)
 
                         checking_district = find_district_in_result(district["id"], previous_result)
@@ -306,6 +310,8 @@ def send_email(receiver_email, html_text, now_time, send_full):
     if (not html_text or not email) and (send_full is False):
         return
 
+    print("send e-mail to {0}".format(receiver_email))
+
     sender_email = DIABETES_SEND_EMAIL
 
     message = MIMEMultipart()
@@ -314,14 +320,14 @@ def send_email(receiver_email, html_text, now_time, send_full):
     message["Subject"] = "Наличие препаратов в аптеках"
 
     if html_text:
-        message.attach(MIMEText("<h1>Изменения на {0}</h1>".format(now_time.strftime("%d.%m.%Y %H:%M:%S")), "html"))
+        message.attach(MIMEText("Изменения на {0}".format(now_time.strftime("%d.%m.%Y %H:%M:%S")), "plain"))
         message.attach(MIMEText(html_text, "html"))
         part_new = add_file_to_html(NEW_REPORT_NAME_TEMPLATE, now_time)
         message.attach(part_new)
     else:
         message.attach(
-            MIMEText("<h1>Изменений на {0} нет, к письму приложен полный отчет</h1>"
-                     .format(now_time.strftime("%d.%m.%Y %H:%M:%S")), "html"))
+            MIMEText("Изменений на {0} нет, к письму приложен полный отчет"
+                     .format(now_time.strftime("%d.%m.%Y %H:%M:%S")), "plain"))
 
     if send_full is True:
         part_full = add_file_to_html(FULL_REPORT_NAME_TEMPLATE, now_time)
@@ -336,7 +342,7 @@ def send_email(receiver_email, html_text, now_time, send_full):
 
 
 if __name__ == '__main__':
-    positions, districts, email, send_full_report = get_values_from_config()
+    positions, districts, emails, send_full_report = get_values_from_config()
     table = ""
     new_table = ""
     for position in positions:
@@ -349,6 +355,7 @@ if __name__ == '__main__':
     now = datetime.now()
     write_report(FULL_REPORT_NAME_TEMPLATE, CSS_STYLE_FULL, now, table)
     write_report(NEW_REPORT_NAME_TEMPLATE, CSS_STYLE_NEW, now, new_table)
-    send_email(email, new_table, now, send_full_report)
+    for email in emails:
+        send_email(email, new_table, now, send_full_report)
     print("process finished")
 
