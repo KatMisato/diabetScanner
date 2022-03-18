@@ -102,10 +102,10 @@ def get_values_from_config():
         config_object = ConfigParser()
         config_object.read("config.ini")
         try:
-            config_positions = config_object["MAIN_CONFIG"]["POSITIONS"].replace(' ', '').split(",")
-            config_districts = config_object["MAIN_CONFIG"]["DISTRICTS"].replace(' ', '').split(",")
+            config_positions = config_object["MAIN_CONFIG"]["POSITIONS"].replace(", ", ",").split(",")
+            config_districts = config_object["MAIN_CONFIG"]["DISTRICTS"].replace(", ", ",").split(",")
             if "E-MAIL" in config_object["MAIN_CONFIG"]:
-                config_emails = config_object["MAIN_CONFIG"]["E-MAIL"].replace(' ', '').split(",")
+                config_emails = config_object["MAIN_CONFIG"]["E-MAIL"].replace(", ", ",").split(",")
             if "SEND-FULL-REPORT" in config_object["MAIN_CONFIG"]:
                 config_send_full_report = config_object.getboolean("MAIN_CONFIG", "SEND-FULL-REPORT")
         except KeyError:
@@ -215,7 +215,7 @@ def print_table_headers(h1_name, headers):
 
 
 def check_district_name(district_name, filter_data):
-    return district_name.replace(' ', '') in filter_data
+    return district_name in filter_data
 
 
 def get_table_for_one_position(name, districts_data):
