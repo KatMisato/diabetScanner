@@ -1,0 +1,77 @@
+from telegram.ext import CallbackContext
+
+from base_classes.DiabetConfigParser import DiabetConfigParser
+from constants import *
+import telegram
+from telegram import Update
+
+
+def update_callback_answer(update: Update, text):
+    update.callback_query.answer()
+    if update.callback_query.message.text != text:
+        update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML)
+
+
+def update_callback_answer_with_keyboard(update: Update, text, keyboard):
+    update.callback_query.answer()
+    if update.callback_query.message.text != text and update.callback_query.message.reply_markup != keyboard:
+        update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
+
+
+def schedule_settings_to_string(schedule):
+    if schedule and len(schedule) and schedule[0]:
+        numbered_array = [int(i) for i in schedule]
+        numbered_array.sort()
+        if numbered_array == EVERY_HOUR_SCHEDULE:
+            return "включена проверка каждый час"
+        elif numbered_array == EVERY_TWO_HOURS_SCHEDULE:
+            return "включена проверка каждые 2 часа"
+        elif numbered_array == EVERY_THREE_HOURS_SCHEDULE:
+            return "включена проверка каждые 3 часа"
+        elif numbered_array == EVERY_SIX_HOURS_SCHEDULE:
+            return "включена проверка каждые 6 часов"
+        else:
+            text_current_schedule = "включена проверка в "
+            hours_string = ''
+            for one_hour in numbered_array:
+                if hours_string:
+                    hours_string += ", "
+                if one_hour < 10:
+                    hours_string += f"0{one_hour}:00"
+                else:
+                    hours_string += f"{one_hour}:00"
+            text_current_schedule += hours_string
+            return text_current_schedule
+    else:
+        return "проверка отключена"
+
+
+def clear_list_for_edit(list_for_clear):
+    try:
+        return list_for_clear.replace(", ", ",").replace(" ,", ",").split(",")
+    except Exception as e:
+        print(e)
+        return []
+
+
+def fill_data_from_settings(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    configparser = DiabetConfigParser(chat_id)
+    positions, districts, emails, send_e_mail, send_full_report, schedule = configparser.get_values_from_config(
+        chat_id)
+    context.user_data[POSITIONS] = positions
+    context.user_data[DISTRICTS] = districts
+    if emails and len(emails):
+        context.user_data[EMAIL] = emails[0]
+    else:
+        context.user_data[EMAIL] = ''
+    context.user_data[SEND_EMAIL] = send_e_mail
+    context.user_data[SEND_FULL_REPORT] = send_full_report
+    context.user_data[SCHEDULE] = schedule
+
+
+def get_mark_icon(some_bool):
+    if some_bool:
+        return PLUS_MARK_ICON
+    else:
+        return MINUS_MARK_ICON
