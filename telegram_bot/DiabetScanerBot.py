@@ -10,13 +10,16 @@ from base_classes.DiabetHtmlReportSender import DiabetHtmlReportSender
 from credentials import bot_token, bot_user_name
 from datetime import datetime
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import InlineKeyboardMarkup
 from utils import *
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 global_chat_id = 0
+
+PORT = int(os.environ.get('PORT', 5000))
+TOKEN = os.environ["TOKEN"]
 
 
 def send_typing_action(func):
@@ -465,6 +468,7 @@ def check_periodic(context: CallbackContext):
     bot.send_media_group(global_chat_id, media=media)
     remove_reports(full_report_file=full_report_file, full_report_file_path=full_report_file_path,
                    new_report_file=new_report_file, new_report_file_path=new_report_file_path)
+    return END
 
 
 def stop(update: Update, _) -> int:
@@ -659,7 +663,9 @@ def save_districts_settings(update: Update, context: CallbackContext) -> int:
 
 
 def main():
-    updater = Updater(token=bot_token, use_context=True)
+    #updater = Updater(token=bot_token, use_context=True)
+    updater = Updater(token=TOKEN, use_context=True)
+
     dp = updater.dispatcher
 
     def stop_and_restart():
@@ -868,7 +874,13 @@ def main():
         time = datetime.now().replace(hour=hour, minute=0, second=0).time()
         j.run_daily(check_periodic, time=time)
 
-    updater.start_polling()
+    #updater.start_polling()
+
+    updater.start_webhook(listen="0.0.0.0",
+                          port=int(PORT),
+                          url_path=TOKEN)
+    updater.bot.setWebhook('heroku.com/apps/diabet-scaner-bot/' + TOKEN)
+
     updater.idle()
 
 
