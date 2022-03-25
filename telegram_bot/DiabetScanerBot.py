@@ -20,6 +20,7 @@ global_chat_id = 0
 
 PORT = int(os.environ.get('PORT', 5000))
 TOKEN = os.environ["TOKEN"]
+BOT_USER_NAME = os.environ.get('BOT-USER-NAME', bot_user_name)
 
 
 def send_typing_action(func):
@@ -676,7 +677,7 @@ def main():
         update.message.reply_text('Bot is restarting...')
         Thread(target=stop_and_restart).start()
 
-    dp.add_handler(CommandHandler('r', restart, filters=Filters.user(username=bot_user_name)))
+    dp.add_handler(CommandHandler('r', restart, filters=Filters.user(username=BOT_USER_NAME)))
 
     positions_settings_conv = ConversationHandler(
         entry_points=[
