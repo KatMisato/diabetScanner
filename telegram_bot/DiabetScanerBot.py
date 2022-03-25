@@ -1,8 +1,6 @@
 from telegram.ext import Updater, CommandHandler, Filters, MessageHandler, CallbackQueryHandler
 from telegram import ChatAction
 import logging
-from telegram import InputMediaDocument
-import os
 import sys
 from threading import Thread
 from functools import wraps
@@ -19,6 +17,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 global_chat_id = 0
+
 
 def send_typing_action(func):
     logger.info("send_typing_action")
@@ -87,6 +86,7 @@ def save_email_input(update: Update, context: CallbackContext) -> int:
 
 def start(update: Update, context: CallbackContext):
     logger.info("start")
+    global global_chat_id
     global_chat_id = update.effective_chat.id
 
     buttons = [
@@ -118,20 +118,24 @@ def show_menu_settings(update: Update, context: CallbackContext):
 
     buttons = [
         [
-            InlineKeyboardButton(text=f"{POSITIONS_ICON} {TEXT_POSITIONS}", callback_data=str(SHOW_MENU_POSITIONS_SETTINGS))
+            InlineKeyboardButton(text=f"{POSITIONS_ICON} {TEXT_POSITIONS}",
+                                 callback_data=str(SHOW_MENU_POSITIONS_SETTINGS))
         ],
         [
-            InlineKeyboardButton(text=f"{DISTRICTS_ICON} {TEXT_DISTRICTS}", callback_data=str(SHOW_MENU_DISTRICTS_SETTINGS))
+            InlineKeyboardButton(text=f"{DISTRICTS_ICON} {TEXT_DISTRICTS}",
+                                 callback_data=str(SHOW_MENU_DISTRICTS_SETTINGS))
         ],
         [
             InlineKeyboardButton(text=f"{REPORT_ICON} {TEXT_REPORTS}", callback_data=str(SHOW_MENU_REPORTS_SETTINGS))
         ],
         [
-            InlineKeyboardButton(text=f"{SCHEDULE_ICON} {TEXT_SCHEDULE}", callback_data=str(SHOW_MENU_SCHEDULE_SETTINGS))
+            InlineKeyboardButton(text=f"{SCHEDULE_ICON} {TEXT_SCHEDULE}",
+                                 callback_data=str(SHOW_MENU_SCHEDULE_SETTINGS))
         ],
         [
-            InlineKeyboardButton(text=f"{SHOW_SETTINGS_ICON} {TEXT_SHOW_SETTINGS}", callback_data=str(SHOW_CURRENT_SETTINGS)),
-            InlineKeyboardButton(text=f"{BACK_ICON} {TEXT_BACK}", callback_data=str(END)),
+            InlineKeyboardButton(text=f"{SHOW_SETTINGS_ICON} {TEXT_SHOW_SETTINGS}",
+                                 callback_data=str(SHOW_CURRENT_SETTINGS)),
+            get_back_button(),
         ],
     ]
     keyboard = InlineKeyboardMarkup(buttons)
@@ -158,7 +162,7 @@ def show_menu_positions_settings(update: Update, context: CallbackContext):
         ],
         [
             InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_POSITIONS_SETTINGS)),
-            InlineKeyboardButton(text=f"{BACK_ICON} {TEXT_BACK}", callback_data=str(END)),
+            get_back_button(),
         ],
     ]
     keyboard = InlineKeyboardMarkup(buttons)
@@ -176,11 +180,11 @@ def show_menu_districts_settings(update: Update, context: CallbackContext):
     logger.info("districts_settings")
     chat_id = update.effective_chat.id
     districts = context.user_data[DISTRICTS]
-    configparser = DiabetConfigParser(chat_id)
+    config_parser = DiabetConfigParser(chat_id)
 
     buttons = []
-    for default_district in configparser.default_districts:
-        if configparser.check_default_district_in_settings(default_district, districts):
+    for default_district in config_parser.default_districts:
+        if config_parser.check_default_district_in_settings(default_district, districts):
             mark = PLUS_MARK_ICON
         else:
             mark = MINUS_MARK_ICON
@@ -188,7 +192,7 @@ def show_menu_districts_settings(update: Update, context: CallbackContext):
         buttons.append([InlineKeyboardButton(text=f"        {mark} {clear_district_name}",
                                              callback_data=str(SET_DISTRICTS_CHECK) + "_" + clear_district_name)])
     buttons.append([InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_DISTRICTS_SETTINGS)),
-                    InlineKeyboardButton(text=f"{BACK_ICON} {TEXT_BACK}", callback_data=str(END))])
+                    get_back_button()])
 
     keyboard = InlineKeyboardMarkup(buttons)
 
@@ -207,11 +211,12 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
     email_send = context.user_data[SEND_EMAIL]
     full_report_send = context.user_data[SEND_FULL_REPORT]
 
-    text_for_menu = "Вы можете изменить e-mail, а также включить/выключить отправку отчетов на e-mail и формирование полного отчета.\nСейчас "
+    text_for_menu = TEXT_MENU_REPORTS
+
     if email:
-        text_for_menu += f"e-mail: {email}\n"
+        text_for_menu += f"{TEXT_EMAIL}: {email}\n"
     else:
-        text_for_menu += f"e-mail не задан\n"
+        text_for_menu += f"Сейчас e-mail не задан\n"
 
     mark_email = get_mark_icon(email_send)
     mark_full_report = get_mark_icon(full_report_send)
@@ -221,7 +226,8 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
             InlineKeyboardButton(text=f"{EMAIL_ICON} {TEXT_CHANGE_EMAIL}", callback_data=str(START_EDIT_REPORTS_EMAIL)),
         ],
         [
-            InlineKeyboardButton(text=f"{mark_email} {TEXT_SENDING_EMAIL}", callback_data=str(SET_REPORTS_SEND_EMAIL_CHECK))
+            InlineKeyboardButton(text=f"{mark_email} {TEXT_SENDING_EMAIL}",
+                                 callback_data=str(SET_REPORTS_SEND_EMAIL_CHECK))
         ],
         [
             InlineKeyboardButton(text=f"{mark_full_report} {TEXT_FULL_REPORT}",
@@ -229,7 +235,7 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
         ],
         [
             InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_REPORTS_SETTINGS)),
-            InlineKeyboardButton(text=f"{BACK_ICON} {TEXT_BACK}", callback_data=str(END)),
+            get_back_button(),
         ],
     ]
     keyboard = InlineKeyboardMarkup(buttons)
@@ -273,7 +279,7 @@ def show_menu_schedule_settings(update: Update, context: CallbackContext):
         ],
         [
             InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_SCHEDULE_SETTINGS)),
-            InlineKeyboardButton(text=f"{BACK_ICON} {TEXT_BACK}", callback_data=str(END)),
+            get_back_button(),
         ],
     ]
     keyboard = InlineKeyboardMarkup(buttons)
@@ -291,37 +297,25 @@ def show_menu_schedule_settings(update: Update, context: CallbackContext):
 
 def start_edit_every_hour_schedule(update: Update, context: CallbackContext):
     logger.info("start_edit_every_hour_schedule")
+
     schedule = context.user_data[SCHEDULE]
 
-    def add_one_line_in_schedule(selected_range):
-        result_buttons = []
-        for one_hour in selected_range:
-            mark = get_mark_icon(str(one_hour) in schedule or one_hour in schedule)
-            if one_hour < 10:
-                result_buttons.append(InlineKeyboardButton(text=f"        {mark} 0{one_hour}:00",
-                                                           callback_data=str(CHECK_SCHEDULE_HOUR) + "_" + str(
-                                                               one_hour)))
-            else:
-                result_buttons.append(InlineKeyboardButton(text=f"        {mark} {one_hour}:00",
-                                                           callback_data=str(CHECK_SCHEDULE_HOUR) + "_" + str(
-                                                               one_hour)))
-        return result_buttons
-
-    buttons = [add_one_line_in_schedule(range(4)),
-               add_one_line_in_schedule(range(4, 8)),
-               add_one_line_in_schedule(range(8, 12)),
-               add_one_line_in_schedule(range(12, 16)),
-               add_one_line_in_schedule(range(16, 20)),
-               add_one_line_in_schedule(range(20, 24)),
-               [InlineKeyboardButton(text=f"{BACK_ICON} Назад", callback_data=str(END))]]
+    buttons = [
+        add_one_line_in_schedule(schedule=schedule, selected_range=range(4)),
+        add_one_line_in_schedule(schedule=schedule, selected_range=range(4, 8)),
+        add_one_line_in_schedule(schedule=schedule, selected_range=range(8, 12)),
+        add_one_line_in_schedule(schedule=schedule, selected_range=range(12, 16)),
+        add_one_line_in_schedule(schedule=schedule, selected_range=range(16, 20)),
+        add_one_line_in_schedule(schedule=schedule, selected_range=range(20, 24)),
+        [get_back_button()]
+    ]
 
     keyboard = InlineKeyboardMarkup(buttons)
 
-    text = "Выберите часы для проверки"
     if (context.user_data.get(START_OVER) or not update.message) and update.callback_query:
-        update_callback_answer_with_keyboard(update=update, text=text, keyboard=keyboard)
+        update_callback_answer_with_keyboard(update=update, text=TEXT_CHECK_HOURS, keyboard=keyboard)
     else:
-        update.message.reply_text(text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
+        update.message.reply_text(text=TEXT_CHECK_HOURS, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
 
     return TYPING_FOR_CHECK_SCHEDULE_HOURS
 
@@ -330,28 +324,31 @@ def show_current_settings(update: Update, _):
     logger.info("show_settings")
     chat_id = update.effective_chat.id
 
-    configparser = DiabetConfigParser(chat_id)
-    positions, districts, emails, send_email, send_full_report, schedule = configparser.get_values_from_config(chat_id)
+    config_parser = DiabetConfigParser(chat_id)
+    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
 
     str_positions = ", ".join(positions)
     message_text = f"{POSITIONS_ICON} <b>{TEXT_POSITIONS}:</b>\n\n        {str_positions}\n\n"
 
     message_text += f"{DISTRICTS_ICON} <b>{TEXT_DISTRICTS}:</b>\n\n"
-    for default_district in configparser.default_districts:
-        message_text += f"        {0} {1}".format(get_mark_icon(configparser.check_default_district_in_settings(default_district, districts)), default_district)
+    for default_district in config_parser.default_districts:
+        message_text += "        {0} {1}\n\n".format(
+            get_mark_icon(config_parser.check_default_district_in_settings(default_district, districts)),
+            default_district)
 
+    message_text += f"{REPORT_ICON} <b>{TEXT_REPORTS}:</b>\n\n"
     if not emails or not emails[0]:
         message_text += f"        {EMAIL_ICON} <b>{TEXT_EMAIL}</b>: {TEXT_NOT_SET}\n\n"
     else:
         str_emails = ", ".join(emails)
         message_text += f"        {EMAIL_ICON} <b>{TEXT_EMAIL}</b>: {str_emails}\n\n"
 
-    message_text += f"        {0} {1}\n\n".format(get_mark_icon(send_email), TEXT_SENDING_EMAIL)
-    message_text += f"        {0} {1}\n\n".format(get_mark_icon(send_full_report), TEXT_FULL_REPORT)
+    message_text += "        {0} {1}\n\n".format(get_mark_icon(send_email), TEXT_SENDING_EMAIL)
+    message_text += "        {0} {1}\n\n".format(get_mark_icon(send_full_report), TEXT_FULL_REPORT)
 
-    message_text += f"{SCHEDULE_ICON} <b>Расписание</b>:\n\n        {schedule_settings_to_string(schedule).capitalize()}"
+    message_text += f"{SCHEDULE_ICON} <b>{TEXT_SCHEDULE}</b>:\n\n        {schedule_settings_to_string(schedule).capitalize()}"
 
-    buttons = [[InlineKeyboardButton(text=f"{BACK_ICON} Назад", callback_data=str(END))]]
+    buttons = [[get_back_button()]]
     keyboard = InlineKeyboardMarkup(buttons)
 
     update_callback_answer_with_keyboard(update=update, text=message_text, keyboard=keyboard)
@@ -370,14 +367,9 @@ def check(update: Update, context: CallbackContext) -> int:
     bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING, timeout=100500)
     now = datetime.now()
 
-    configparser = DiabetConfigParser(chat_id)
-    positions, districts, emails, send_email, send_full_report, schedule = configparser.get_values_from_config(chat_id)
+    config_parser = DiabetConfigParser(chat_id)
+    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
 
-    html_parser = DiabetHtmlReportParser(chat_id)
-
-    table = ""
-    new_table = ""
-    districts_string = ", ".join(districts)
     email_string = ""
     if emails and len(emails) and emails[0] and send_email:
         if send_full_report:
@@ -385,6 +377,11 @@ def check(update: Update, context: CallbackContext) -> int:
         else:
             email_string = f"{TEXT_SEND_TO_EMAIL_ONLY_NEW} {emails[0]}\n\n"
 
+    districts_string = "\n    ".join(districts).title()
+    table = ""
+    new_table = ""
+
+    html_parser = DiabetHtmlReportParser(chat_id)
     for position in positions:
         update.callback_query.edit_message_text(
             text=f"{TEXT_RECEIVING_DATA}\n    {districts_string}\n\n{email_string}Ищу {position}")
@@ -394,39 +391,38 @@ def check(update: Update, context: CallbackContext) -> int:
         if diff_table_res:
             new_table += diff_table_res
 
+    bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.UPLOAD_DOCUMENT)
+
     report_sender = DiabetHtmlReportSender(now, chat_id)
     full_report_file, full_report_file_path = report_sender.write_report(True, now, table)
     new_report_file, new_report_file_path = report_sender.write_report(False, now, new_table)
 
-    for email in emails:
-        report_sender.send_email(email, new_table, send_full_report)
+    report_sender.send_emails(emails=emails, new_table=new_table, send_full_report=send_full_report)
 
-    bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.UPLOAD_DOCUMENT)
-    media = []
-    if send_full_report and full_report_file:
-        media.append(InputMediaDocument(caption="Полный отчет на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
-                                        media=open(full_report_file_path, 'rb')))
-    if full_report_file:
-        os.remove(full_report_file_path)
-
-    if new_report_file:
-        media.append(InputMediaDocument(caption="Новые позиции на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
-                                        media=open(new_report_file_path, 'rb')))
-        os.remove(new_report_file_path)
-    buttons = [[InlineKeyboardButton(text=f"{BACK_ICON} Назад", callback_data=str(END))]]
+    media = create_media_for_reports(now=now, send_full_report=send_full_report, full_report_file=full_report_file,
+                                     full_report_file_path=full_report_file_path, new_report_file=new_report_file,
+                                     new_report_file_path=new_report_file_path)
+    buttons = [[get_back_button()]]
     keyboard = InlineKeyboardMarkup(buttons)
 
     list_messages_for_remove = []
     if media:
-        if len(media) > 1:
-            message_suffix = "файлах"
+        message_suffix = get_media_suffix(media)
+        if emails and len(emails) and emails[0] and send_email:
+            update_callback_answer_with_keyboard(update=update,
+                                                 text=f"Результаты в {message_suffix} ниже.\nОтправил их на {emails[0]}",
+                                                 keyboard=keyboard)
         else:
-            message_suffix = "файле"
-        update.callback_query.edit_message_text(text=f"Результаты в {message_suffix} ниже", reply_markup=keyboard)
+            update_callback_answer_with_keyboard(update=update, text=f"Результаты в {message_suffix} ниже",
+                                                 keyboard=keyboard)
         list_messages_for_remove = update.callback_query.message.reply_media_group(media=media)
+        remove_reports(full_report_file=full_report_file, full_report_file_path=full_report_file_path,
+                       new_report_file=new_report_file, new_report_file_path=new_report_file_path)
     else:
-        update.callback_query.edit_message_text(f"{TEXT_NOT_FOUND}", parse_mode=telegram.ParseMode.HTML,
-                                                reply_markup=keyboard)
+        if send_full_report:
+            update_callback_answer_with_keyboard(update=update, text=f"{TEXT_NOT_FOUND}", keyboard=keyboard)
+        else:
+            update_callback_answer_with_keyboard(update=update, text=f"{TEXT_NEW_NOT_FOUND}", keyboard=keyboard)
 
     user_data = context.user_data
     user_data[START_OVER] = True
@@ -435,42 +431,45 @@ def check(update: Update, context: CallbackContext) -> int:
     return SHOWING
 
 
-def check_periodic(bot):
-    logger.info("check_periodic, global_chat_id = {global_chat_id}")
-
+def check_periodic(context: CallbackContext):
+    bot = context.bot
     now = datetime.now()
-    configparser = DiabetConfigParser(global_chat_id)
-    positions, districts, emails, send_email, send_full_report, schedule = configparser.get_values_from_config(global_chat_id)
+    logger.info(f"check_periodic, global_chat_id = {global_chat_id}, current_hour = {now.hour}")
+
+    config_parser = DiabetConfigParser(global_chat_id)
+    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(
+        global_chat_id)
+
+    is_find_hour = False
+    for one_hour in schedule:
+        if int(one_hour) == now.hour:
+            logger.info(f"check_periodic, time in schedule range")
+            is_find_hour = True
+    if not is_find_hour:
+        logger.info(f"check_periodic, time {now.hour} not in schedule range {schedule}, exit")
+        return
 
     html_parser = DiabetHtmlReportParser(global_chat_id)
 
-    table = ""
-    new_table = ""
-    districts_string = ", ".join(districts)
-    email_string = ""
-    if emails and len(emails) and emails[0] and send_email:
-        if send_full_report:
-            email_string = f"{TEXT_SEND_TO_EMAIL} {emails[0]}\n\n"
-        else:
-            email_string = f"{TEXT_SEND_TO_EMAIL_ONLY_NEW} {emails[0]}\n\n"
-
-    for position in positions:
-        table_res, diff_table_res = html_parser.get_table_for_one_position(position, districts)
-        if table_res:
-            table += table_res
-        if diff_table_res:
-            new_table += diff_table_res
+    table, new_table = html_parser.get_tables_from_html_positions(positions=positions, districts=districts)
 
     report_sender = DiabetHtmlReportSender(now, global_chat_id)
     full_report_file, full_report_file_path = report_sender.write_report(True, now, table)
     new_report_file, new_report_file_path = report_sender.write_report(False, now, new_table)
 
-    for email in emails:
-        report_sender.send_email(email, new_table, send_full_report)
+    report_sender.send_emails(emails=emails, new_table=new_table, send_full_report=send_full_report)
+
+    media = create_media_for_reports(now=now, send_full_report=send_full_report, full_report_file=full_report_file,
+                                     full_report_file_path=full_report_file_path, new_report_file=new_report_file,
+                                     new_report_file_path=new_report_file_path)
+    bot.send_media_group(global_chat_id, media=media)
+    remove_reports(full_report_file=full_report_file, full_report_file_path=full_report_file_path,
+                   new_report_file=new_report_file, new_report_file_path=new_report_file_path)
+
 
 def stop(update: Update, _) -> int:
     logger.info("stop")
-    update.message.reply_text('Пока')
+    update.message.reply_text(TEXT_BYE)
 
     return END
 
@@ -485,7 +484,7 @@ def return_to_start(update: Update, context: CallbackContext) -> int:
 
 def stop_nested(update: Update, _) -> int:
     logger.info("stop_nested")
-    update.message.reply_text('Пока.')
+    update.message.reply_text(TEXT_BYE)
     return STOPPING
 
 
@@ -496,7 +495,7 @@ def end_change_settings(update: Update, context: CallbackContext) -> int:
 
 def end_change_schedule_hours(update: Update, context: CallbackContext) -> int:
     logger.info("end_change_schedule_hours")
-    
+
     context.user_data[START_OVER] = True
     show_menu_schedule_settings(update, context)
 
@@ -505,10 +504,10 @@ def end_change_schedule_hours(update: Update, context: CallbackContext) -> int:
 
 def save_positions_settings(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_positions")
-    
+
     chat_id = update.callback_query.message.chat.id
-    configparser = DiabetConfigParser(chat_id)
-    configparser.save_positions_to_config(chat_id, context.user_data[POSITIONS])
+    config_parser = DiabetConfigParser(chat_id)
+    config_parser.save_positions_to_config(chat_id, context.user_data[POSITIONS])
 
     return return_to_main_settings(update=update, context=context)
 
@@ -516,19 +515,20 @@ def save_positions_settings(update: Update, context: CallbackContext) -> int:
 def save_reports_settings(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_reports")
     chat_id = update.callback_query.message.chat.id
-    
-    configparser = DiabetConfigParser(chat_id)
-    configparser.save_reports_to_config(chat_id, context.user_data[EMAIL], context.user_data[SEND_EMAIL], context.user_data[SEND_FULL_REPORT])
+
+    config_parser = DiabetConfigParser(chat_id)
+    config_parser.save_reports_to_config(chat_id, context.user_data[EMAIL], context.user_data[SEND_EMAIL],
+                                         context.user_data[SEND_FULL_REPORT])
 
     return return_to_main_settings(update=update, context=context)
 
 
 def save_settings_schedule(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_schedule")
-    
+
     chat_id = update.callback_query.message.chat.id
-    configparser = DiabetConfigParser(chat_id)
-    configparser.save_schedule_to_config(chat_id, context.user_data[SCHEDULE])
+    config_parser = DiabetConfigParser(chat_id)
+    config_parser.save_schedule_to_config(chat_id, context.user_data[SCHEDULE])
 
     return return_to_main_settings(update=update, context=context)
 
@@ -544,15 +544,14 @@ def return_to_main_settings(update: Update, context: CallbackContext) -> int:
 
 def set_district_check(update: Update, context: CallbackContext) -> int:
     logger.info("check_district")
-    query = update.callback_query
-    checking_district = query.data.split("_", 1)[1]
+
+    checking_district = update.callback_query.data.split("_", 1)[1]
     user_data = context.user_data
     current_districts = user_data[DISTRICTS]
 
     index_district = -1
     for index, current_district in enumerate(current_districts):
-        clean_default_name = current_district.replace("район", "").replace(" ", "").lower()
-        if checking_district.lower() == clean_default_name:
+        if checking_district.lower() == get_district_name_for_compare(current_district):
             index_district = index
             break
 
@@ -587,7 +586,7 @@ def return_to_showing_menu_reports_settings(update: Update, context: CallbackCon
 
 def check_schedule_hour(update: Update, context: CallbackContext) -> int:
     logger.info("check_schedule_hour")
-    
+
     checking_hour = int(update.callback_query.data.split("_", 1)[1])
     current_schedule = context.user_data[SCHEDULE]
 
@@ -643,15 +642,15 @@ def set_schedule_data(update: Update, context: CallbackContext, data):
     context.user_data[SCHEDULE] = data
     context.user_data[START_OVER] = True
     show_menu_schedule_settings(update, context)
-    
-    
+
+
 def save_districts_settings(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_districts")
-    
+
     chat_id = update.callback_query.message.chat.id
-    
-    configparser = DiabetConfigParser(chat_id)
-    configparser.save_districts_to_config(chat_id, context.user_data[DISTRICTS])
+
+    config_parser = DiabetConfigParser(chat_id)
+    config_parser.save_districts_to_config(chat_id, context.user_data[DISTRICTS])
 
     context.user_data[START_OVER] = True
     show_menu_settings(update, context)
@@ -695,9 +694,7 @@ def main():
             CommandHandler('stop', stop_nested),
         ],
         map_to_parent={
-            # Return to second level menu
             END: SHOWING_SETTINGS,
-            # End conversation altogether
             STOPPING: STOPPING,
         }
     )

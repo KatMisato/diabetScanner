@@ -13,21 +13,14 @@ if __name__ == '__main__':
 
     html_parser = DiabetHtmlReportParser()
 
-    table = ""
-    new_table = ""
-    for position in positions:
-        table_res, diff_table_res = html_parser.get_table_for_one_position(position, districts)
-        if table_res:
-            table += table_res
-        if diff_table_res:
-            new_table += diff_table_res
+    table, new_table = html_parser.get_tables_from_html_positions(positions=positions, districts=districts)
 
     report_sender = DiabetHtmlReportSender(now)
     report_sender.write_report(True, now, table)
     report_sender.write_report(False, now, new_table)
+
     if send_email:
-        for email in emails:
-            report_sender.send_email(email, new_table, send_full_report)
+        report_sender.send_emails(emails=emails, new_table=new_table, send_full_report=send_full_report)
 
     print("process finished")
 

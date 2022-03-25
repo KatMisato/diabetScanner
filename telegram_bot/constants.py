@@ -29,6 +29,7 @@ SCHEDULE_EVERY_HOUR_ICON_SETTINGS = "\U000023F0"
 SCHEDULE_OFF_ICON = "\U0001F6D1"
 
 THINKING_ICON = "\U0001F914"
+BYE_ICON = "\U0001F917"
 
 EVERY_HOUR_SCHEDULE = list(range(24))
 EVERY_TWO_HOURS_SCHEDULE = list(range(0, 24, 2))
@@ -138,6 +139,16 @@ TEXT_SEND_TO_EMAIL = "Результат отправлю на почту"
 
 TEXT_SEND_TO_EMAIL_ONLY_NEW = "Найду что-то новое - отправлю на почту"
 
-TEXT_RECEIVING_DATA = "Выполняю получение данных в районах:"
+TEXT_RECEIVING_DATA = "Выполняю получение данных по следующим районам:"
 
-TEXT_NOT_FOUND = f"Я ничего не нашел {THINKING_ICON}. Такое бывает, если препараты не привозили в аптеки."
+TEXT_NOT_FOUND = f"Я ничего не нашел {THINKING_ICON}. Попробуйте задать другие настройки поиска."
+
+TEXT_NEW_NOT_FOUND = f"Я не нашел ничего нового {THINKING_ICON}. Такое бывает, если препараты не привозили в аптеки."
+
+TEXT_MENU_REPORTS = "Вы можете изменить e-mail, на который будут отправляться отчеты с найденными препаратами.\n" \
+                    "Также можете включить/выключить отправку отчетов на e-mail и формирование полного отчета со всеми найденными препаратами.\n" \
+                    "По-умолчанию формируется только отчет с вновь появившимися позициями\n"
+
+TEXT_BYE = f"Пока {BYE_ICON}"
+
+TEXT_CHECK_HOURS = "Выберите часы для проверки"

@@ -133,6 +133,10 @@ class DiabetHtmlReportSender:
             server.login(self.email_login, self.email_password)
             server.sendmail(sender_email, receiver_email, text)
 
+    def send_emails(self, emails, new_table, send_full_report):
+        for email in emails:
+            self.send_email(email, new_table, send_full_report)
+
     def add_file_to_html(self, name_template, now_time):
         filename = name_template.format(now_time.strftime("%Y_%m_%d_%H_%M_%S"))
         filepath = os.path.join(self.get_reports_dir(), filename)

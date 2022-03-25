@@ -1,9 +1,11 @@
+import os
+
 from telegram.ext import CallbackContext
 
 from base_classes.DiabetConfigParser import DiabetConfigParser
 from constants import *
 import telegram
-from telegram import Update
+from telegram import Update, InputMediaDocument, InlineKeyboardButton
 
 
 def update_callback_answer(update: Update, text):
@@ -70,8 +72,60 @@ def fill_data_from_settings(update: Update, context: CallbackContext):
     context.user_data[SCHEDULE] = schedule
 
 
+def create_media_for_reports(now, send_full_report, full_report_file, full_report_file_path, new_report_file, new_report_file_path):
+    media = []
+    if send_full_report and full_report_file:
+        media.append(InputMediaDocument(caption="Полный отчет на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
+                                        media=open(full_report_file_path, 'rb')))
+
+    if new_report_file:
+        media.append(InputMediaDocument(caption="Новые позиции на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
+                                        media=open(new_report_file_path, 'rb')))
+    return media
+
+
+def remove_reports(full_report_file, full_report_file_path, new_report_file, new_report_file_path):
+    if full_report_file:
+        os.remove(full_report_file_path)
+
+    if new_report_file:
+        os.remove(new_report_file_path)
+
+
 def get_mark_icon(some_bool):
     if some_bool:
         return PLUS_MARK_ICON
     else:
         return MINUS_MARK_ICON
+
+
+def get_media_suffix(files_array):
+    if len(files_array) > 1:
+        return "файлах"
+    else:
+        return "файле"
+
+
+def get_district_name_for_compare(district):
+    return district.replace("район", "").replace(" ", "").lower()
+
+
+def get_hour_mark_with_string(one_hour, schedule):
+    mark = get_mark_icon(str(one_hour) in schedule or one_hour in schedule)
+    if one_hour < 10:
+        return f"        {mark} 0{one_hour}:00"
+    else:
+        return f"        {mark} {one_hour}:00"
+
+
+def add_one_line_in_schedule(schedule, selected_range):
+    result_buttons = []
+    for one_hour in selected_range:
+        str_mark = get_hour_mark_with_string(one_hour=one_hour, schedule=schedule)
+        result_buttons.append(InlineKeyboardButton(text=str_mark, callback_data=str(CHECK_SCHEDULE_HOUR) + "_" +
+                                                   str(one_hour)))
+    return result_buttons
+
+
+def get_back_button():
+    return InlineKeyboardButton(text=f"{BACK_ICON} {TEXT_BACK}", callback_data=str(END))

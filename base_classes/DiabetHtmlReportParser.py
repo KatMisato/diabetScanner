@@ -97,7 +97,7 @@ class DiabetHtmlReportParser:
 
     def get_table_for_one_position(self, name, districts_filter):
         url = self.base_url.format(request.quote(name)).strip()
-        print("get data for {0} ...".format(name))
+        print("get data for {0}, url = {1} ...".format(name, url))
 
         try:
             if not os.path.isdir(self.json_data_dir):
@@ -170,6 +170,17 @@ class DiabetHtmlReportParser:
                 print(e.__dict__)
 
         return res_table, data_diff
+
+    def get_tables_from_html_positions(self, positions, districts):
+        table = ""
+        new_table = ""
+        for position in positions:
+            table_res, diff_table_res = self.get_table_for_one_position(position, districts)
+            if table_res:
+                table += table_res
+            if diff_table_res:
+                new_table += diff_table_res
+        return table, new_table
 
     @staticmethod
     def find_pharmacy_in_district(checking_name, district_for_check):
