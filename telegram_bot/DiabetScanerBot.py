@@ -7,7 +7,7 @@ from functools import wraps
 
 from base_classes.DiabetHtmlReportParser import DiabetHtmlReportParser
 from base_classes.DiabetHtmlReportSender import DiabetHtmlReportSender
-from credentials import bot_token, bot_user_name
+#from credentials import bot_token, bot_user_name
 from datetime import datetime
 
 from telegram import InlineKeyboardMarkup
@@ -22,7 +22,7 @@ global_chat_id = 0
 
 PORT = int(os.environ.get('PORT', 5000))
 TOKEN = os.environ["TOKEN"]
-BOT_USER_NAME = os.environ.get('BOT-USER-NAME', bot_user_name)
+BOT_USER_NAME = os.environ.get('BOT-USER-NAME', "")
 
 
 def send_typing_action(func):
