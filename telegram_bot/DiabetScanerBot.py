@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 global_chat_id = 0
 
-PORT = int(os.environ.get('PORT', 5000))
+PORT = int(os.environ.get('PORT', 8443))
 TOKEN = os.environ["TOKEN"]
 BOT_USER_NAME = os.environ.get('BOT-USER-NAME', "")
 
