@@ -22,6 +22,7 @@ Jinja2==3.0.3
 MarkupSafe==2.1.1
 pefile==2021.9.3
 pipreqs==0.4.11
+psycopg==3.0.10
 psycopg2==2.9.3
 pycparser==2.21
 pyinstaller==4.10

@@ -1,5 +1,5 @@
 import os
-import psycopg2
+import psycopg
 
 from base.DiabetParamsWorker import DiabetParamsWorker
 
@@ -11,6 +11,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         self.db_name = os.environ.get("DB_NAME")
         self.db_user = os.environ.get("DB_USER")
         self.db_password = os.environ.get("DB_PASSWORD")
+        self.pg_uri = os.environ.get("DB_URI")
 
     def get_values_from_config(self, config_suffix=''):
         try:
@@ -28,7 +29,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                 return values_result
             else:
                 self.init_config_with_default_values(config_suffix)
-        except (Exception, psycopg2.Error) as error:
+        except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
@@ -51,7 +52,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             str_positions = ", ".join([str(elem) for elem in new_positions])
             self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set positions = {str_positions}, where config_suffix={config_suffix};")
-        except (Exception, psycopg2.Error) as error:
+        except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
@@ -61,7 +62,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             str_districts = ", ".join([str(elem) for elem in new_districts])
             self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set districts = {str_districts}, where config_suffix={config_suffix};")
-        except (Exception, psycopg2.Error) as error:
+        except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
@@ -71,7 +72,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             str_emails = ", ".join([str(elem) for elem in new_email])
             self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix={config_suffix};")
-        except (Exception, psycopg2.Error) as error:
+        except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
@@ -81,7 +82,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             str_schedule = ", ".join([str(elem) for elem in new_schedule])
             self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set schedule = {str_schedule}, where config_suffix={config_suffix};")
-        except (Exception, psycopg2.Error) as error:
+        except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
@@ -93,7 +94,9 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
 
     def open_db(self):
         self.logger.info(f"open_db {self.db_name}, {self.db_user}, {self.db_password}")
-        connection = psycopg2.connect(dbname=self.db_name, user=self.db_user, password=self.db_password)
+        conn_dict = psycopg.conninfo.conninfo_to_dict(self.pg_uri)
+        connection = psycopg.connect(**conn_dict)
+        #connection = psycopg2.connect(dbname=self.db_name, user=self.db_user, password=self.db_password)
         cursor = connection.cursor()
         return connection, cursor
 
