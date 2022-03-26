@@ -1,13 +1,19 @@
-import sys
-sys.path.append('../base/')
-
-from base.DiabetConfigParser import DiabetConfigParser
+from base.DiabetParamsFabric import DiabetParamsFabric
 
 import os
 from Constants import *
 import telegram
 from telegram import Update, InputMediaDocument, InlineKeyboardButton
 from telegram.ext import CallbackContext
+import os
+
+import telegram
+from telegram import Update, InputMediaDocument, InlineKeyboardButton
+from telegram.ext import CallbackContext
+
+from Constants import *
+from base.DiabetParamsFabric import DiabetParamsFabric
+
 
 def update_callback_answer(update: Update, text):
     update.callback_query.answer()
@@ -57,9 +63,10 @@ def clear_list_for_edit(list_for_clear):
         return []
 
 
-def fill_data_from_settings(update: Update, context: CallbackContext):
+def fill_data_from_settings(update: Update, context: CallbackContext, logger):
     chat_id = update.effective_chat.id
-    configparser = DiabetConfigParser(chat_id)
+    config_fabric = DiabetParamsFabric(True, logger, chat_id)
+    return config_fabric.get_config_worker()
     positions, districts, emails, send_e_mail, send_full_report, schedule = configparser.get_values_from_config(
         chat_id)
     context.user_data[POSITIONS] = positions

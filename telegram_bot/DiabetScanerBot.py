@@ -149,7 +149,7 @@ def show_menu_settings(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(text=TEXT_FOR_MENU_SETTINGS, reply_markup=keyboard)
 
-    fill_data_from_settings(update=update, context=context)
+    fill_data_from_settings(update=update, context=context, logger=logger)
 
     return RUN_MENU_SETTINGS
 
