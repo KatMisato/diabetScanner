@@ -20,8 +20,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                            "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);")
             connection.commit()
             cursor.execute(f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={config_suffix};")
-            result = cursor.fetchall()
-            if result and len(result) == 6:
+            if cursor.rowcount == 6:
+                result = cursor.fetchall()
                 self.logger.info(f"get_values_from_config result = {result}")
                 positions = str(result[0]).replace(", ", ",").split(",")
                 districts = str(result[1]).replace(", ", ",").split(",")
