@@ -1,14 +1,15 @@
 from datetime import datetime
 
-from base.DiabetConfigParser import DiabetConfigParser
 from base.DiabetHtmlReportParser import DiabetHtmlReportParser
 from base.DiabetHtmlReportSender import DiabetHtmlReportSender
+from base.DiabetParamsFabric import DiabetParamsFabric
 
 if __name__ == '__main__':
     now = datetime.now()
 
-    configparser = DiabetConfigParser()
-    positions, districts, emails, send_email, send_full_report, schedule = configparser.get_values_from_config()
+    config_fabric = DiabetParamsFabric(False)
+    config_parser = config_fabric.get_config_worker()
+    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config()
 
     html_parser = DiabetHtmlReportParser()
 

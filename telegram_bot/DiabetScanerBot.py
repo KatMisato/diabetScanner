@@ -10,11 +10,18 @@ from datetime import datetime
 from Utils import *
 from base.DiabetHtmlReportParser import DiabetHtmlReportParser
 from base.DiabetHtmlReportSender import DiabetHtmlReportSender
+from base.DiabetParamsFabric import DiabetParamsFabric
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 global_chat_id = 0
+
+
+def get_config_parser(chat_id):
+    config_fabric = DiabetParamsFabric(True, logger, chat_id)
+    return config_fabric.get_config_worker()
+
 
 def send_typing_action(func):
     logger.info("send_typing_action")
@@ -177,7 +184,8 @@ def show_menu_districts_settings(update: Update, context: CallbackContext):
     logger.info("districts_settings")
     chat_id = update.effective_chat.id
     districts = context.user_data[DISTRICTS]
-    config_parser = DiabetConfigParser(chat_id)
+
+    config_parser = get_config_parser(chat_id)
 
     buttons = []
     for default_district in config_parser.default_districts:
@@ -321,7 +329,7 @@ def show_current_settings(update: Update, _):
     logger.info("show_settings")
     chat_id = update.effective_chat.id
 
-    config_parser = DiabetConfigParser(chat_id)
+    config_parser = get_config_parser(chat_id)
     positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
 
     str_positions = ", ".join(positions)
@@ -364,7 +372,7 @@ def check(update: Update, context: CallbackContext) -> int:
     bot.send_chat_action(chat_id=chat_id, action=telegram.ChatAction.TYPING, timeout=100500)
     now = datetime.now()
 
-    config_parser = DiabetConfigParser(chat_id)
+    config_parser = get_config_parser(chat_id)
     positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
 
     email_string = ""
@@ -433,7 +441,7 @@ def check_periodic(context: CallbackContext):
     now = datetime.now()
     logger.info(f"check_periodic, global_chat_id = {global_chat_id}, current_hour = {now.hour}")
 
-    config_parser = DiabetConfigParser(global_chat_id)
+    config_parser = get_config_parser(global_chat_id)
     positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(
         global_chat_id)
 
@@ -504,7 +512,7 @@ def save_positions_settings(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_positions")
 
     chat_id = update.callback_query.message.chat.id
-    config_parser = DiabetConfigParser(chat_id)
+    config_parser = get_config_parser(chat_id)
     config_parser.save_positions_to_config(chat_id, context.user_data[POSITIONS])
 
     return return_to_main_settings(update=update, context=context)
@@ -514,7 +522,7 @@ def save_reports_settings(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_reports")
     chat_id = update.callback_query.message.chat.id
 
-    config_parser = DiabetConfigParser(chat_id)
+    config_parser = get_config_parser(chat_id)
     config_parser.save_reports_to_config(chat_id, context.user_data[EMAIL], context.user_data[SEND_EMAIL],
                                          context.user_data[SEND_FULL_REPORT])
 
@@ -525,7 +533,7 @@ def save_settings_schedule(update: Update, context: CallbackContext) -> int:
     logger.info("save_settings_schedule")
 
     chat_id = update.callback_query.message.chat.id
-    config_parser = DiabetConfigParser(chat_id)
+    config_parser = get_config_parser(chat_id)
     config_parser.save_schedule_to_config(chat_id, context.user_data[SCHEDULE])
 
     return return_to_main_settings(update=update, context=context)
@@ -647,7 +655,7 @@ def save_districts_settings(update: Update, context: CallbackContext) -> int:
 
     chat_id = update.callback_query.message.chat.id
 
-    config_parser = DiabetConfigParser(chat_id)
+    config_parser = get_config_parser(chat_id)
     config_parser.save_districts_to_config(chat_id, context.user_data[DISTRICTS])
 
     context.user_data[START_OVER] = True

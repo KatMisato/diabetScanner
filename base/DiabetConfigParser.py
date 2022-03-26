@@ -2,6 +2,7 @@ import os
 from os import path
 from configparser import ConfigParser
 
+from base.DiabetParamsWorker import DiabetParamsWorker
 
 MAIN_CONFIG_SECTION = "MAIN_CONFIG"
 POSITIONS_SECTION = "POSITIONS"
@@ -12,25 +13,12 @@ SEND_FULL_REPORT_SECTION = "SEND-FULL-REPORT"
 SCHEDULE_SECTION = "SCHEDULE"
 
 
-class DiabetConfigParser:
-    def __init__(self, config_suffix=''):
-        self.default_positions = ["Апидра", "Новорапид", "Туджео", "Левемир", "Хумалог", "Ринфаст", "Ринлиз", "Тресиба",
-                                  "Росинсулин", "Фиасп", "Лантус"]
-
-        self.default_districts = ["Адмиралтейский", "Василеостровский", "Выборгский",
-                                  "Калининский",
-                                  "Кировский", "Колпинский", "Красногвардейский",
-                                  "Красносельский",
-                                  "Кронштадтcкий", "Курортный", "Московский", "Невский",
-                                  "Петроградский", "Петродворцовый", "Приморский", "Пушкинский",
-                                  "Фрунзенский", "Центральный"]
-
-        self.default_schedule = []
+class DiabetConfigParser(DiabetParamsWorker):
+    def __init__(self, logger=None, config_suffix=''):
+        super().__init__(logger, config_suffix)
         self.config_dir = "../configs"
 
         self.config_suffix = config_suffix
-
-        self.config_districts = []
 
     def get_config_filename(self, config_suffix):
         if not config_suffix:
@@ -39,7 +27,7 @@ class DiabetConfigParser:
 
     def get_values_from_config(self, config_suffix=''):
         config_positions = self.default_positions
-        self.config_districts = self.default_districts
+        config_districts = self.default_districts
         config_emails = ""
         config_send_full_report = True
         config_send_email = False
@@ -55,7 +43,7 @@ class DiabetConfigParser:
                     config_positions = config_object[MAIN_CONFIG_SECTION][POSITIONS_SECTION].replace(", ", ",").split(",")
 
                 if DISTRICTS_SECTION in config_object[MAIN_CONFIG_SECTION]:
-                    self.config_districts = config_object[MAIN_CONFIG_SECTION][DISTRICTS_SECTION].replace(", ", ",").split(",")
+                    config_districts = config_object[MAIN_CONFIG_SECTION][DISTRICTS_SECTION].replace(", ", ",").split(",")
 
                 if EMAIL_SECTION in config_object[MAIN_CONFIG_SECTION]:
                     config_emails = config_object[MAIN_CONFIG_SECTION][EMAIL_SECTION].replace(", ", ",").split(",")
@@ -73,7 +61,7 @@ class DiabetConfigParser:
         else:
             self.init_config_with_default_values(config_suffix)
 
-        return config_positions, self.config_districts, config_emails, config_send_email, config_send_full_report, config_schedule
+        return config_positions, config_districts, config_emails, config_send_email, config_send_full_report, config_schedule
 
     def init_config_with_default_values(self, config_suffix):
         try:
