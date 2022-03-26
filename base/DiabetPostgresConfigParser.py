@@ -17,7 +17,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         query = ""
         try:
             connection, cursor = self.open_db()
-            query = "CREATE TABLE IF NOT EXISTS bot_params (id serial PRIMARY KEY, config_suffix text, " \
+            query = "CREATE TABLE IF NOT EXISTS bot_params (id serial PRIMARY KEY, config_suffix bigint, " \
                     "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);"
             cursor.execute(query)
             connection.commit()
