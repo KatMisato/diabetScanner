@@ -882,8 +882,6 @@ def main():
     if is_local_run:
         updater.start_polling()
     else:
-        global PORT
-        global TOKEN
         logger.info(f"run bot, PORT = {PORT}")
         updater.start_webhook(listen="0.0.0.0",
                               port=int(PORT),
