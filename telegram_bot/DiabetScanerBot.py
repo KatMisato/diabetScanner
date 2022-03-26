@@ -665,7 +665,7 @@ def main():
     else:
         bot_token = os.environ.get("BOT-TOKEN")
         bot_user_name = os.environ.get("BOT-USER-NAME")
-        bot_webhook_port = int(os.environ.get("PORT"), 5000)
+        bot_webhook_port = int(os.environ.get("PORT", '8443'))
         logger.info(f"run bot, port = {bot_webhook_port}, bot_user_name={bot_user_name}, bot_token = {bot_token}")
         updater = Updater(token=bot_token, use_context=True)
 
@@ -881,7 +881,7 @@ def main():
         updater.start_polling()
     else:
         updater.start_webhook(listen="0.0.0.0",
-                              port=int(bot_webhook_port),
+                              port=bot_webhook_port,
                               url_path=bot_token,
                               webhook_url='https://heroku.com/apps/diabet-scaner-bot/' + bot_token,
                               force_event_loop=True)
