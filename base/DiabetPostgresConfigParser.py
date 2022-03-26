@@ -86,16 +86,19 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
-    def execute_update(self, connection, cursor, query):
+    @staticmethod
+    def execute_update(connection, cursor, query):
         cursor.execute(query)
         connection.commit()
 
     def open_db(self):
+        self.logger.info(f"open_db {self.db_name}, {self.db_user}, {self.db_password}")
         connection = psycopg2.connect(dbname=self.db_name, user=self.db_user, password=self.db_password)
         cursor = connection.cursor()
-        return connection,cursor
+        return connection, cursor
 
-    def close_db(self, connection, cursor):
+    @staticmethod
+    def close_db(connection, cursor):
         if connection:
             if cursor:
                 cursor.close()
