@@ -885,9 +885,8 @@ def main():
     else:
         updater.start_webhook(listen="0.0.0.0",
                               port=int(bot_webhook_port),
-                              url_path=bot_token)
-        updater.bot.setWebhook('https://heroku.com/apps/diabet-scaner-bot/' + bot_token)
-
+                              url_path=bot_token,
+                              webhook_url='https://heroku.com/apps/diabet-scaner-bot/' + bot_token)
     updater.idle()
 
 
