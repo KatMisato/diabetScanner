@@ -47,7 +47,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
     def init_config_with_default_values(self, config_suffix):
         config_positions = ", ".join([str(elem) for elem in self.default_positions])
         config_districts = ", ".join([str(elem) for elem in self.default_districts])
-        config_email = ""
+        config_email = ", ".join([str(elem) for elem in []])
         send_email = False
         send_full_report = True
         config_schedule = ", ".join([str(elem) for elem in self.default_schedule])
