@@ -19,7 +19,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             cursor.execute("CREATE TABLE IF NOT EXISTS bot_params (id serial PRIMARY KEY, config_suffix text, "
                            "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);")
             connection.commit()
-            cursor.execute(f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={config_suffix};")
+            str_config = str(config_suffix)
+            cursor.execute(f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};")
             if cursor.rowcount == 6:
                 result = cursor.fetchall()
                 self.logger.info(f"get_values_from_config result = {result}")
@@ -50,13 +51,15 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         config_schedule = ", ".join([str(elem) for elem in self.default_schedule])
 
         connection, cursor = self.open_db()
-        self.execute_update(connection=connection, cursor=cursor, query=f"insert into bot_params (config_suffix, positions, districts, email, send_email, send_full_report, schedule) values({config_suffix}, {config_positions}, {config_districts}, {config_email}, {send_email}, {send_full_report}, {config_schedule});")
+        str_config = str(config_suffix)
+        self.execute_update(connection=connection, cursor=cursor, query=f"insert into bot_params (config_suffix, positions, districts, email, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {config_email}, {send_email}, {send_full_report}, {config_schedule});")
 
     def save_positions_to_config(self, config_suffix, new_positions):
         try:
             connection, cursor = self.open_db()
             str_positions = ", ".join([str(elem) for elem in new_positions])
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set positions = {str_positions}, where config_suffix={config_suffix};")
+            str_config = str(config_suffix)
+            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set positions = {str_positions}, where config_suffix={str_config};")
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
@@ -66,7 +69,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             connection, cursor = self.open_db()
             str_districts = ", ".join([str(elem) for elem in new_districts])
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set districts = {str_districts}, where config_suffix={config_suffix};")
+            str_config = str(config_suffix)
+            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set districts = {str_districts}, where config_suffix={str_config};")
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
@@ -76,7 +80,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             connection, cursor = self.open_db()
             str_emails = ", ".join([str(elem) for elem in new_email])
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix={config_suffix};")
+            str_config = str(config_suffix)
+            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix={str_config};")
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
@@ -86,7 +91,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             connection, cursor = self.open_db()
             str_schedule = ", ".join([str(elem) for elem in new_schedule])
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set schedule = {str_schedule}, where config_suffix={config_suffix};")
+            str_config = str(config_suffix)
+            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set schedule = {str_schedule}, where config_suffix={str_config};")
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
