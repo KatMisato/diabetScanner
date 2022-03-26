@@ -106,7 +106,6 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         connection.commit()
 
     def open_db(self):
-        self.logger.info(f"open_db {self.db_name}, {self.db_user}, {self.db_password}")
         conn_dict = psycopg.conninfo.conninfo_to_dict(self.pg_uri)
         connection = psycopg.connect(**conn_dict)
         cursor = connection.cursor()
