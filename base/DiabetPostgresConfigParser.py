@@ -23,10 +23,15 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             result = cursor.fetchall()
             if result and len(result) == 6:
                 self.logger.info(f"get_values_from_config result = {result}")
-                values_result = str(result[0]).replace(", ", ",").split(","), str(result[1]).replace(", ", ",").split(","), str(result[2]).replace(", ", ",").split(","),  result[3],  result[4], str(result[5]).replace(", ", ",").split(",")
+                positions = str(result[0]).replace(", ", ",").split(",")
+                districts = str(result[1]).replace(", ", ",").split(",")
+                emails = str(result[2]).replace(", ", ",").split(",")
+                send_email = result[3]
+                send_full_report = result[4]
+                schedule = str(result[5]).replace(", ", ",").split(",")
                 self.close_db(connection=connection, cursor=cursor)
-                self.logger.info(f"get_values_from_config values_result = {values_result}")
-                return values_result
+                self.logger.info(f"get_values_from_config values_result = {positions}, {districts}, {emails}, {send_email}, {send_full_report}, {schedule}")
+                return positions, districts, emails, send_email, send_full_report, schedule
             else:
                 self.init_config_with_default_values(config_suffix)
         except (Exception, psycopg.Error) as error:
