@@ -1,1 +1,1 @@
-web: python3 ./telegram_bot/DiabetScanerBot.py
+web: python ./telegram_bot/DiabetScanerBot.py

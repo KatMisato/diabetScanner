@@ -16,8 +16,6 @@ logger = logging.getLogger(__name__)
 
 global_chat_id = 0
 
-PORT = int(os.environ.get('PORT', 8443))
-TOKEN = os.environ["TOKEN"]
 BOT_USER_NAME = os.environ.get('BOT-USER-NAME', "")
 
 
@@ -882,11 +880,13 @@ def main():
     if is_local_run:
         updater.start_polling()
     else:
-        logger.info(f"run bot, PORT = {PORT}")
+        port = int(os.environ.get('PORT', 8443))
+        token = os.environ.get("TOKEN")
+        logger.info(f"run bot, port = {port}")
         updater.start_webhook(listen="0.0.0.0",
-                              port=int(PORT),
-                              url_path=TOKEN)
-        updater.bot.setWebhook('https://heroku.com/apps/diabet-scaner-bot/' + TOKEN)
+                              port=int(port),
+                              url_path=token)
+        updater.bot.setWebhook('https://heroku.com/apps/diabet-scaner-bot/' + token)
 
     updater.idle()
 
