@@ -17,8 +17,6 @@ class DiabetParamsWorker:
 
         self.config_suffix = config_suffix
 
-        self.config_districts = []
-
     def get_values_from_config(self, config_suffix=''):
         pass
 
