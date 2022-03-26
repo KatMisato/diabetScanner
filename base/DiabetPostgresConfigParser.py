@@ -14,14 +14,17 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         self.pg_uri = os.environ.get("DB_URI")
 
     def get_values_from_config(self, config_suffix=''):
+        query = ""
         try:
             connection, cursor = self.open_db()
-            cursor.execute("CREATE TABLE IF NOT EXISTS bot_params (id serial PRIMARY KEY, config_suffix text, "
-                           "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);")
+            query = "CREATE TABLE IF NOT EXISTS bot_params (id serial PRIMARY KEY, config_suffix text, " \
+                    "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);"
+            cursor.execute(query)
             connection.commit()
             str_config = str(config_suffix)
-            cursor.execute(f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};")
-            self.logger.info(f"get_values_from_config select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};")
+            query = f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};"
+            cursor.execute(query)
+            self.logger.info(f"get_values_from_config {query}")
             self.logger.info(f"get_values_from_config cursor.rowcount = {cursor.rowcount};")
             if cursor.rowcount == 6:
                 result = cursor.fetchall()
@@ -38,7 +41,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             else:
                 self.init_config_with_default_values(config_suffix)
         except (Exception, psycopg.Error) as error:
-            self.logger.info("Error in update operation", error)
+            self.logger.info(f"Error in select operation, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
