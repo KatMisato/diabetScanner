@@ -669,7 +669,7 @@ def main():
         bot_token = os.environ.get("BOT-TOKEN")
         bot_user_name = os.environ.get("BOT-USER-NAME")
         bot_webhook_port = int(os.environ.get("BOT-PORT"))
-        logger.info(f"run bot, port = {bot_webhook_port}, bot_user_name={bot_user_name}")
+        logger.info(f"run bot, port = {bot_webhook_port}, bot_user_name={bot_user_name}, bot_token = {bot_token}")
         updater = Updater(token=bot_token, use_context=True)
 
     dp = updater.dispatcher
