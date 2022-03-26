@@ -66,9 +66,9 @@ def clear_list_for_edit(list_for_clear):
 def fill_data_from_settings(update: Update, context: CallbackContext, logger):
     chat_id = update.effective_chat.id
     config_fabric = DiabetParamsFabric(True, logger, chat_id)
-    return config_fabric.get_config_worker()
-    positions, districts, emails, send_e_mail, send_full_report, schedule = configparser.get_values_from_config(
-        chat_id)
+    config_parser = config_fabric.get_config_worker()
+
+    positions, districts, emails, send_e_mail, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
     context.user_data[POSITIONS] = positions
     context.user_data[DISTRICTS] = districts
     if emails and len(emails):
