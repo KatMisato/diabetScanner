@@ -1,19 +1,15 @@
-from telegram.ext import Updater, CommandHandler, Filters, MessageHandler, CallbackQueryHandler
-from telegram import ChatAction
 import logging
-import sys
+
+from telegram.ext import Updater, CommandHandler, Filters, MessageHandler, CallbackQueryHandler
+from telegram import ChatAction, InlineKeyboardMarkup
+
 from threading import Thread
 from functools import wraps
-
-from base_classes.DiabetHtmlReportParser import DiabetHtmlReportParser
-from base_classes.DiabetHtmlReportSender import DiabetHtmlReportSender
-#from credentials import bot_token, bot_user_name
 from datetime import datetime
 
-from telegram import InlineKeyboardMarkup
-from utils import *
-
-
+from Utils import *
+from base.DiabetHtmlReportParser import DiabetHtmlReportParser
+from base.DiabetHtmlReportSender import DiabetHtmlReportSender
 
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -666,8 +662,14 @@ def save_districts_settings(update: Update, context: CallbackContext) -> int:
 
 
 def main():
-    #updater = Updater(token=bot_token, use_context=True)
-    updater = Updater(token=TOKEN, use_context=True)
+    global BOT_USER_NAME
+    is_local_run = "local" in sys.argv
+    if is_local_run:
+        from credentials import bot_token, bot_user_name
+        BOT_USER_NAME = bot_user_name
+        updater = Updater(token=bot_token, use_context=True)
+    else:
+        updater = Updater(token=TOKEN, use_context=True)
 
     dp = updater.dispatcher
 
@@ -877,12 +879,13 @@ def main():
         time = datetime.now().replace(hour=hour, minute=0, second=0).time()
         j.run_daily(check_periodic, time=time)
 
-    #updater.start_polling()
-
-    updater.start_webhook(listen="0.0.0.0",
-                          port=int(PORT),
-                          url_path=TOKEN)
-    updater.bot.setWebhook('heroku.com/apps/diabet-scaner-bot/' + TOKEN)
+    if is_local_run:
+        updater.start_polling()
+    else:
+        updater.start_webhook(listen="0.0.0.0",
+                              port=int(PORT),
+                              url_path=TOKEN)
+        updater.bot.setWebhook('https://heroku.com/apps/diabet-scaner-bot/' + TOKEN)
 
     updater.idle()
 

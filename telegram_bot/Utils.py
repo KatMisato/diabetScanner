@@ -1,12 +1,13 @@
+import sys
+sys.path.append('../base/')
+
+from base.DiabetConfigParser import DiabetConfigParser
+
 import os
-
-from telegram.ext import CallbackContext
-
-from base_classes.DiabetConfigParser import DiabetConfigParser
-from constants import *
+from Constants import *
 import telegram
 from telegram import Update, InputMediaDocument, InlineKeyboardButton
-
+from telegram.ext import CallbackContext
 
 def update_callback_answer(update: Update, text):
     update.callback_query.answer()

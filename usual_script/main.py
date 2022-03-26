@@ -1,9 +1,8 @@
 from datetime import datetime
 
-
-from base_classes.DiabetConfigParser import DiabetConfigParser
-from base_classes.DiabetHtmlReportParser import DiabetHtmlReportParser
-from base_classes.DiabetHtmlReportSender import DiabetHtmlReportSender
+from base.DiabetConfigParser import DiabetConfigParser
+from base.DiabetHtmlReportParser import DiabetHtmlReportParser
+from base.DiabetHtmlReportSender import DiabetHtmlReportSender
 
 if __name__ == '__main__':
     now = datetime.now()
