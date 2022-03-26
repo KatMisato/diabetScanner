@@ -660,7 +660,7 @@ def save_districts_settings(update: Update, context: CallbackContext) -> int:
 
 
 def main():
-    is_local_run = "local" in sys.argv
+    is_local_run = "local" in os.environ.get("BOT-TYPE-RUN", "local")
     if is_local_run:
         from credentials import bot_token, bot_user_name
         updater = Updater(token=bot_token, use_context=True)
