@@ -8,9 +8,6 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
     def __init__(self, logger, config_suffix=''):
         super().__init__(logger, config_suffix)
 
-        self.db_name = os.environ.get("DB_NAME")
-        self.db_user = os.environ.get("DB_USER")
-        self.db_password = os.environ.get("DB_PASSWORD")
         self.pg_uri = os.environ.get("DB_URI")
 
     def get_values_from_config(self, config_suffix=''):
