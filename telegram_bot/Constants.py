@@ -45,7 +45,7 @@ EVERY_SIX_HOURS_SCHEDULE = list(range(0, 24, 6))
     SCHEDULE,
     START_OVER,
     MESSAGES_FOR_REMOVE
-) = map(chr, range(30, 38))
+) = range(30, 38)
 
 # Меню первого уровня
 RUN_CHECK, SHOW_MENU_MAIN_SETTINGS, RUN_START, SELECTING_ACTION = range(4)
