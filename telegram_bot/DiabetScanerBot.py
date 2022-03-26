@@ -660,14 +660,16 @@ def save_districts_settings(update: Update, context: CallbackContext) -> int:
 
 
 def main():
-    global BOT_USER_NAME
     is_local_run = "local" in sys.argv
     if is_local_run:
         from credentials import bot_token, bot_user_name
-        BOT_USER_NAME = bot_user_name
         updater = Updater(token=bot_token, use_context=True)
     else:
-        updater = Updater(token=TOKEN, use_context=True)
+        bot_token = os.environ.get("TOKEN")
+        bot_user_name = os.environ.get("BOT-USER-NAME")
+        port = int(os.environ.get("PORT"))
+        logger.info(f"run bot, port = {port}")
+        updater = Updater(token=bot_token, use_context=True)
 
     dp = updater.dispatcher
 
@@ -679,7 +681,7 @@ def main():
         update.message.reply_text('Bot is restarting...')
         Thread(target=stop_and_restart).start()
 
-    dp.add_handler(CommandHandler('r', restart, filters=Filters.user(username=BOT_USER_NAME)))
+    dp.add_handler(CommandHandler('r', restart, filters=Filters.user(username=bot_user_name)))
 
     positions_settings_conv = ConversationHandler(
         entry_points=[
@@ -881,12 +883,10 @@ def main():
         updater.start_polling()
     else:
         port = int(os.environ.get('PORT', 8443))
-        token = os.environ.get("TOKEN")
-        logger.info(f"run bot, port = {port}")
         updater.start_webhook(listen="0.0.0.0",
                               port=int(port),
-                              url_path=token)
-        updater.bot.setWebhook('https://heroku.com/apps/diabet-scaner-bot/' + token)
+                              url_path=bot_token)
+        updater.bot.setWebhook('https://heroku.com/apps/diabet-scaner-bot/' + bot_token)
 
     updater.idle()
 
