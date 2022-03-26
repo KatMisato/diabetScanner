@@ -21,6 +21,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection.commit()
             str_config = str(config_suffix)
             cursor.execute(f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};")
+            self.logger.info(f"get_values_from_config select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};")
+            self.logger.info(f"get_values_from_config cursor.rowcount = {cursor.rowcount};")
             if cursor.rowcount == 6:
                 result = cursor.fetchall()
                 self.logger.info(f"get_values_from_config result = {result}")
