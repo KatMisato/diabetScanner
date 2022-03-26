@@ -33,3 +33,12 @@ class DiabetParamsWorker:
 
     def save_schedule_to_config(self, config_suffix, new_schedule):
         pass
+
+    @staticmethod
+    def check_default_district_in_settings(default_district, districts):
+        default_district_clean_name = default_district.lower().replace(" район", "")
+        for settings_district in districts:
+            filter_setting_name = settings_district.lower().replace(" район", "")
+            if default_district_clean_name == filter_setting_name:
+                return True
+        return False

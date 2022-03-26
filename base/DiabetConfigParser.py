@@ -114,15 +114,7 @@ class DiabetConfigParser(DiabetParamsWorker):
         config_object = self.read_config_from_file(config_filename)
         config_object[MAIN_CONFIG_SECTION][SCHEDULE_SECTION] = ", ".join([str(elem) for elem in new_schedule])
         self.write_config_to_file(config_filename, config_object)
-        
-    @staticmethod
-    def check_default_district_in_settings(default_district, districts):
-        default_district_clean_name = default_district.lower().replace(" район", "")
-        for settings_district in districts:
-            filter_setting_name = settings_district.lower().replace(" район", "")
-            if default_district_clean_name == filter_setting_name:
-                return True
-        return False
+
 
     @staticmethod
     def read_config_from_file(filename):
