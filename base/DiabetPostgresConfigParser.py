@@ -17,7 +17,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             connection, cursor = self.open_db()
             cursor.execute("CREATE TABLE IF NOT EXISTS bot_params (id serial PRIMARY KEY, config_suffix text, "
-                           "positions text, districts text, email text send_email boolean, send_full_report boolean, schedule text);")
+                           "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);")
             connection.commit()
             cursor.execute(f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={config_suffix};")
             result = cursor.fetchall()
