@@ -16,9 +16,6 @@ logger = logging.getLogger(__name__)
 
 global_chat_id = 0
 
-BOT_USER_NAME = os.environ.get('BOT-USER-NAME', "")
-
-
 def send_typing_action(func):
     logger.info("send_typing_action")
 
