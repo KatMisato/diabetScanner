@@ -45,7 +45,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
-        return self.default_positions, self.default_districts, "", False, True, self.default_schedule
+        return self.default_positions, self.default_districts, [], False, True, self.default_schedule
 
     def init_config_with_default_values(self, config_suffix):
         config_positions = ", ".join([str(elem) for elem in self.default_positions])
