@@ -127,7 +127,6 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
     def string_to_string_for_db(str_value):
         return "'" + str(str_value) + "'"
 
-    @staticmethod
     def execute_update(self, connection, cursor, query):
         self.logger.info(f"execute_update, query = {query}")
         cursor.execute(query)
