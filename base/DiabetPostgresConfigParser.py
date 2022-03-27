@@ -50,14 +50,13 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             config_positions = ", ".join([str(elem) for elem in self.default_positions])
             config_districts = ", ".join([str(elem) for elem in self.default_districts])
-            config_email = ""
             send_email = False
             send_full_report = True
             config_schedule = ", ".join([str(elem) for elem in self.default_schedule])
 
             connection, cursor = self.open_db()
             str_config = str(config_suffix)
-            query = f"insert into bot_params (config_suffix, positions, districts, email, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {config_email}, {send_email}, {send_full_report}, {config_schedule});"
+            query = f"insert into bot_params (config_suffix, positions, districts, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {send_email}, {send_full_report}, {config_schedule});"
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
             self.logger.info(f"Error in select operation, query = {query}", error)
