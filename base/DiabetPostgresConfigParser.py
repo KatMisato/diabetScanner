@@ -22,9 +22,8 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             query = f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};"
             cursor.execute(query)
             self.logger.info(f"get_values_from_config {query}")
-            self.logger.info(f"get_values_from_config cursor.rowcount = {cursor.rowcount};")
             if cursor.rowcount:
-                result = cursor.fetchall()
+                result = cursor.fetchall()[0]
                 self.logger.info(f"get_values_from_config result = {result}")
                 positions = self.string_from_db_to_array(result[0])
                 districts = self.string_from_db_to_array(result[1])
