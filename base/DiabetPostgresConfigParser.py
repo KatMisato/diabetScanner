@@ -18,7 +18,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                     "positions text, districts text, email text, send_email boolean, send_full_report boolean, schedule text);"
             cursor.execute(query)
             connection.commit()
-            str_config = str(config_suffix)
+            str_config = self.string_to_string_for_db(config_suffix)
             query = f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix='{str_config}';"
             cursor.execute(query)
             self.logger.info(f"get_values_from_config {query}")
@@ -32,7 +32,6 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                 send_email = result[3]
                 send_full_report = result[4]
                 schedule = str(result[5]).replace(", ", ",").split(",")
-                self.close_db(connection=connection, cursor=cursor)
                 self.logger.info(f"get_values_from_config values_result = {positions}, {districts}, {emails}, {send_email}, {send_full_report}, {schedule}")
                 return positions, districts, emails, send_email, send_full_report, schedule
             else:
@@ -48,14 +47,15 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
 
     def init_config_with_default_values(self, config_suffix):
         try:
-            config_positions = ", ".join([str(elem) for elem in self.default_positions])
-            config_districts = ", ".join([str(elem) for elem in self.default_districts])
+            config_positions = self.array_to_string_for_db(self.default_positions)
+            config_districts = self.array_to_string_for_db(self.default_districts)
             send_email = False
             send_full_report = True
-            config_schedule = ", ".join([str(elem) for elem in self.default_schedule])
+            config_schedule = self.array_to_string_for_db(self.default_schedule)
+
+            str_config = self.string_to_string_for_db(config_suffix)
 
             connection, cursor = self.open_db()
-            str_config = str(config_suffix)
             query = f"insert into bot_params (config_suffix, positions, districts, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {send_email}, {send_full_report}, {config_schedule});"
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
@@ -65,21 +65,25 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
 
     def save_positions_to_config(self, config_suffix, new_positions):
         try:
+            str_positions = self.array_to_string_for_db(new_positions)
+            str_config = self.string_to_string_for_db(config_suffix)
+            query = f"update bot_params set positions = {str_positions}, where config_suffix='{str_config}';"
+
             connection, cursor = self.open_db()
-            str_positions = ", ".join([str(elem) for elem in new_positions])
-            str_config = str(config_suffix)
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set positions = {str_positions}, where config_suffix='{str_config}';")
+            self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
-            self.logger.info("Error in update operation", error)
+            self.logger.info("Error in update operation, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
     def save_districts_to_config(self, config_suffix, new_districts):
         try:
+            str_districts = self.array_to_string_for_db(new_districts)
+            str_config = self.string_to_string_for_db(config_suffix)
+            query = f"update bot_params set districts = {str_districts}, where config_suffix='{str_config}';"
+
             connection, cursor = self.open_db()
-            str_districts = ", ".join([str(elem) for elem in new_districts])
-            str_config = str(config_suffix)
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set districts = {str_districts}, where config_suffix='{str_config}';")
+            self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
@@ -87,10 +91,12 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
 
     def save_reports_to_config(self, config_suffix, new_email, new_send_email, new_send_full_report):
         try:
+            str_emails = self.array_to_string_for_db([new_email])
+            str_config = self.string_to_string_for_db(config_suffix)
+            query = f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix='{str_config}';"
+
             connection, cursor = self.open_db()
-            str_emails = ", ".join([str(elem) for elem in new_email])
-            str_config = str(config_suffix)
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix='{str_config}';")
+            self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
@@ -99,13 +105,24 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
     def save_schedule_to_config(self, config_suffix, new_schedule):
         try:
             connection, cursor = self.open_db()
-            str_schedule = ", ".join([str(elem) for elem in new_schedule])
-            str_config = str(config_suffix)
-            self.execute_update(connection=connection, cursor=cursor, query=f"update bot_params set schedule = {str_schedule}, where config_suffix='{str_config}';")
+            str_schedule = self.array_to_string_for_db(new_schedule)
+            str_config = self.string_to_string_for_db(config_suffix)
+            query = f"update bot_params set schedule = {str_schedule}, where config_suffix='{str_config}';"
+
+            connection, cursor = self.open_db()
+            self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
             self.logger.info("Error in update operation", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
+
+    @staticmethod
+    def array_to_string_for_db(array_value):
+        return "'" + ", ".join([str(elem) for elem in array_value]) + "'"
+
+    @staticmethod
+    def string_to_string_for_db(str_value):
+        return "'" + str_value + "'"
 
     @staticmethod
     def execute_update(connection, cursor, query):
