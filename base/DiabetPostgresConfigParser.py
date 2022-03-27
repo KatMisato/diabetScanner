@@ -23,7 +23,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             cursor.execute(query)
             self.logger.info(f"get_values_from_config {query}")
             self.logger.info(f"get_values_from_config cursor.rowcount = {cursor.rowcount};")
-            if cursor.rowcount == 6:
+            if cursor.rowcount:
                 result = cursor.fetchall()
                 self.logger.info(f"get_values_from_config result = {result}")
                 positions = str(result[0]).replace(", ", ",").split(",")
