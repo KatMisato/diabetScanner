@@ -23,12 +23,12 @@ def update_callback_answer(update: Update, text):
 
 def update_callback_answer_with_keyboard(update: Update, text, keyboard):
     update.callback_query.answer()
-    if update.callback_query.message.text != text and update.callback_query.message.reply_markup != keyboard:
+    if update.callback_query.message.text != text or update.callback_query.message.reply_markup != keyboard:
         update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
 
 
 def schedule_settings_to_string(schedule):
-    if schedule and len(schedule) and schedule[0]:
+    if schedule and len(schedule):
         numbered_array = [int(i) for i in schedule]
         numbered_array.sort()
         if numbered_array == EVERY_HOUR_SCHEDULE:
@@ -63,9 +63,9 @@ def clear_list_for_edit(list_for_clear):
         return []
 
 
-def fill_data_from_settings(update: Update, context: CallbackContext, logger):
+def fill_data_from_settings(heroku_run: bool, update: Update, context: CallbackContext, logger):
     chat_id = update.effective_chat.id
-    config_fabric = DiabetParamsFabric(True, logger, chat_id)
+    config_fabric = DiabetParamsFabric(heroku_run, logger, chat_id)
     config_parser = config_fabric.get_config_worker()
 
     positions, districts, emails, send_e_mail, send_full_report, schedule = config_parser.get_values_from_config(chat_id)

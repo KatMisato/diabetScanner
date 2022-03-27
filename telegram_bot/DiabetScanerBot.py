@@ -17,10 +17,10 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 global_chat_id = 0
-
+global_heroku_run = False
 
 def get_config_parser(chat_id):
-    config_fabric = DiabetParamsFabric(True, logger, chat_id)
+    config_fabric = DiabetParamsFabric(global_heroku_run, logger, chat_id)
     return config_fabric.get_config_worker()
 
 
@@ -150,7 +150,7 @@ def show_menu_settings(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(text=TEXT_FOR_MENU_SETTINGS, reply_markup=keyboard)
 
-    fill_data_from_settings(update=update, context=context, logger=logger)
+    fill_data_from_settings(heroku_run=global_heroku_run, update=update, context=context, logger=logger)
 
     return RUN_MENU_SETTINGS
 
@@ -184,7 +184,9 @@ def show_menu_positions_settings(update: Update, context: CallbackContext):
 def show_menu_districts_settings(update: Update, context: CallbackContext):
     logger.info("districts_settings")
     chat_id = update.effective_chat.id
+
     districts = context.user_data[DISTRICTS]
+    logger.info(f"districts_settings, districts = {districts}")
 
     config_parser = get_config_parser(chat_id)
 
@@ -194,8 +196,10 @@ def show_menu_districts_settings(update: Update, context: CallbackContext):
             mark = PLUS_MARK_ICON
         else:
             mark = MINUS_MARK_ICON
+
         clear_district_name = default_district.replace(" район", "").title()
-        buttons.append([InlineKeyboardButton(text=f"        {mark} {clear_district_name}",
+        text = f"        {mark} {clear_district_name}"
+        buttons.append([InlineKeyboardButton(text=text,
                                              callback_data=str(SET_DISTRICTS_CHECK) + "_" + clear_district_name)])
     buttons.append([InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_DISTRICTS_SETTINGS)),
                     get_back_button()])
@@ -403,7 +407,8 @@ def check(update: Update, context: CallbackContext) -> int:
     full_report_file, full_report_file_path = report_sender.write_report(True, now, table)
     new_report_file, new_report_file_path = report_sender.write_report(False, now, new_table)
 
-    report_sender.send_emails(emails=emails, new_table=new_table, send_full_report=send_full_report)
+    if send_email:
+        report_sender.send_emails(emails=emails, new_table=new_table, send_full_report=send_full_report)
 
     media = create_media_for_reports(now=now, send_full_report=send_full_report, full_report_file=full_report_file,
                                      full_report_file_path=full_report_file_path, new_report_file=new_report_file,
@@ -568,6 +573,7 @@ def set_district_check(update: Update, context: CallbackContext) -> int:
         current_districts.pop(index_district)
 
     context.user_data[START_OVER] = True
+
     show_menu_districts_settings(update, context)
 
     return START_EDIT_DISTRICTS
@@ -666,18 +672,19 @@ def save_districts_settings(update: Update, context: CallbackContext) -> int:
 
 
 def main():
+    global global_heroku_run
     is_local_run = "local" in os.environ.get("BOT-TYPE-RUN", "local")
     if is_local_run:
         from credentials import bot_token, bot_user_name
         updater = Updater(token=bot_token, use_context=True)
         bot_webhook_port = 8443
     else:
+        global_heroku_run = True
         bot_token = os.environ.get("BOT-TOKEN")
         bot_user_name = os.environ.get("BOT-USER-NAME")
         bot_webhook_port = int(os.environ.get("PORT", '8443'))
         logger.info(f"run bot, port = {bot_webhook_port}, bot_user_name={bot_user_name}, bot_token = {bot_token}")
         updater = Updater(token=bot_token, use_context=True)
-        return
 
     dp = updater.dispatcher
 

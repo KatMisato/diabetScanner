@@ -121,7 +121,7 @@ TEXT_EVERY_HOUR = "Проверять каждый час"
 
 TEXT_EVERY_TWO_HOURS = "Проверять каждые 2 часа"
 
-TEXT_EVERY_THREE_HOURS = "Проверять каждые 2 часа"
+TEXT_EVERY_THREE_HOURS = "Проверять каждые 3 часа"
 
 TEXT_EVERY_SIX_HOURS = "Проверять каждые 6 часов"
 
