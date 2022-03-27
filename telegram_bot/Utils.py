@@ -80,7 +80,7 @@ def fill_data_from_settings(heroku_run: bool, update: Update, context: CallbackC
     context.user_data[SCHEDULE] = schedule
 
 
-def create_media_for_reports(now, send_full_report, full_report_file, full_report_file_path, new_report_file, new_report_file_path, table, new_table):
+def create_media_for_reports(now, send_full_report, full_report_file, full_report_file_path, new_report_file, new_report_file_path):
     media = []
     if send_full_report and full_report_file:
         media.append(InputMediaDocument(caption="Полный отчет на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
