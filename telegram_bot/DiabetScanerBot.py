@@ -412,7 +412,7 @@ def check(update: Update, context: CallbackContext) -> int:
 
     media = create_media_for_reports(now=now, send_full_report=send_full_report, full_report_file=full_report_file,
                                      full_report_file_path=full_report_file_path, new_report_file=new_report_file,
-                                     new_report_file_path=new_report_file_path)
+                                     new_report_file_path=new_report_file_path, table=table, new_table=new_table)
     buttons = [[get_back_button()]]
     keyboard = InlineKeyboardMarkup(buttons)
 
