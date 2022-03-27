@@ -36,8 +36,10 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                 self.logger.info(f"get_values_from_config values_result = {positions}, {districts}, {emails}, {send_email}, {send_full_report}, {schedule}")
                 return positions, districts, emails, send_email, send_full_report, schedule
             else:
+                self.close_db(connection=connection, cursor=cursor)
                 self.init_config_with_default_values(config_suffix)
         except (Exception, psycopg.Error) as error:
+            self.close_db(connection=connection, cursor=cursor)
             self.logger.info(f"Error in select operation, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
@@ -45,16 +47,22 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         return self.default_positions, self.default_districts, [], False, True, self.default_schedule
 
     def init_config_with_default_values(self, config_suffix):
-        config_positions = ", ".join([str(elem) for elem in self.default_positions])
-        config_districts = ", ".join([str(elem) for elem in self.default_districts])
-        config_email = ", ".join([str(elem) for elem in []])
-        send_email = False
-        send_full_report = True
-        config_schedule = ", ".join([str(elem) for elem in self.default_schedule])
+        try:
+            config_positions = ", ".join([str(elem) for elem in self.default_positions])
+            config_districts = ", ".join([str(elem) for elem in self.default_districts])
+            config_email = ""
+            send_email = False
+            send_full_report = True
+            config_schedule = ", ".join([str(elem) for elem in self.default_schedule])
 
-        connection, cursor = self.open_db()
-        str_config = str(config_suffix)
-        self.execute_update(connection=connection, cursor=cursor, query=f"insert into bot_params (config_suffix, positions, districts, email, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {config_email}, {send_email}, {send_full_report}, {config_schedule});")
+            connection, cursor = self.open_db()
+            str_config = str(config_suffix)
+            query = f"insert into bot_params (config_suffix, positions, districts, email, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {config_email}, {send_email}, {send_full_report}, {config_schedule});"
+            self.execute_update(connection=connection, cursor=cursor, query=query)
+        except (Exception, psycopg.Error) as error:
+            self.logger.info(f"Error in select operation, query = {query}", error)
+        finally:
+            self.close_db(connection=connection, cursor=cursor)
 
     def save_positions_to_config(self, config_suffix, new_positions):
         try:
