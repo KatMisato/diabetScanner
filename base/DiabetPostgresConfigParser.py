@@ -118,7 +118,10 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
 
     @staticmethod
     def array_to_string_for_db(array_value):
-        return "'" + ", ".join([str(elem) for elem in array_value]) + "'"
+        if len(array_value):
+            return "'" + ", ".join([str(elem) for elem in array_value]) + "'"
+        else:
+            return "Null"
 
     @staticmethod
     def string_to_string_for_db(str_value):
