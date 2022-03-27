@@ -26,12 +26,12 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             if cursor.rowcount:
                 result = cursor.fetchall()
                 self.logger.info(f"get_values_from_config result = {result}")
-                positions = str(result[0]).replace(", ", ",").split(",")
-                districts = str(result[1]).replace(", ", ",").split(",")
-                emails = str(result[2]).replace(", ", ",").split(",")
+                positions = self.string_from_db_to_array(result[0])
+                districts = self.string_from_db_to_array(result[1])
+                emails = self.string_from_db_to_array(result[2])
                 send_email = result[3]
                 send_full_report = result[4]
-                schedule = str(result[5]).replace(", ", ",").split(",")
+                schedule = self.string_from_db_to_array(result[5])
                 self.logger.info(f"get_values_from_config values_result = {positions}, {districts}, {emails}, {send_email}, {send_full_report}, {schedule}")
                 return positions, districts, emails, send_email, send_full_report, schedule
             else:
@@ -122,6 +122,13 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             return "'" + ", ".join([str(elem) for elem in array_value]) + "'"
         else:
             return "Null"
+
+    @staticmethod
+    def string_from_db_to_array(str_value):
+        if str_value is None or str_value == 'Null' or not len(str_value):
+            return []
+
+        return str_value.replace(", ", ",").split(",")
 
     @staticmethod
     def string_to_string_for_db(str_value):
