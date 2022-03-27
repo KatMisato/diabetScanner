@@ -99,12 +99,12 @@ class DiabetHtmlReportParser:
         url = self.base_url.format(request.quote(name)).strip()
         print("get data for {0}, url = {1} ...".format(name, url))
 
-        try:
-            if not os.path.isdir(self.json_data_dir):
-                os.makedirs(self.json_data_dir)
-        except OSError as os_error:
-            print(os_error)
-            return
+        # try:
+        #     if not os.path.isdir(self.json_data_dir):
+        #         os.makedirs(self.json_data_dir)
+        # except OSError as os_error:
+        #     print(os_error)
+        #     return
 
         res_table = ""
         data_diff = ""

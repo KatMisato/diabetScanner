@@ -395,6 +395,7 @@ def check(update: Update, context: CallbackContext) -> int:
     for position in positions:
         update.callback_query.edit_message_text(
             text=f"{TEXT_RECEIVING_DATA}\n    {districts_string}\n\n{email_string}Ищу {position}")
+        logger.info("get_table_for_one_position, {position}, {districts}")
         table_res, diff_table_res = html_parser.get_table_for_one_position(position, districts)
         if table_res:
             table += table_res
