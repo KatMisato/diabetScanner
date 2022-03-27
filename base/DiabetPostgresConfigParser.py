@@ -19,7 +19,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             cursor.execute(query)
             connection.commit()
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix='{str_config}';"
+            query = f"select positions, districts, email, send_email, send_full_report, schedule from bot_params where config_suffix={str_config};"
             cursor.execute(query)
             self.logger.info(f"get_values_from_config {query}")
             self.logger.info(f"get_values_from_config cursor.rowcount = {cursor.rowcount};")
@@ -67,7 +67,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             str_positions = self.array_to_string_for_db(new_positions)
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set positions = {str_positions}, where config_suffix='{str_config}';"
+            query = f"update bot_params set positions = {str_positions}, where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
@@ -80,7 +80,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             str_districts = self.array_to_string_for_db(new_districts)
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set districts = {str_districts}, where config_suffix='{str_config}';"
+            query = f"update bot_params set districts = {str_districts}, where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
@@ -93,7 +93,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             str_emails = self.array_to_string_for_db([new_email])
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix='{str_config}';"
+            query = f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
@@ -107,7 +107,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             str_schedule = self.array_to_string_for_db(new_schedule)
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set schedule = {str_schedule}, where config_suffix='{str_config}';"
+            query = f"update bot_params set schedule = {str_schedule}, where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
