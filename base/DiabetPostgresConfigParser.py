@@ -39,7 +39,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                 self.init_config_with_default_values(config_suffix)
         except (Exception, psycopg.Error) as error:
             self.close_db(connection=connection, cursor=cursor)
-            self.logger.info(f"Error in select operation, query = {query}", error)
+            self.logger.info(f"Error in get_values_from_config, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
@@ -59,7 +59,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             query = f"insert into bot_params (config_suffix, positions, districts, send_email, send_full_report, schedule) values({str_config}, {config_positions}, {config_districts}, {send_email}, {send_full_report}, {config_schedule});"
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
-            self.logger.info(f"Error in select operation, query = {query}", error)
+            self.logger.info(f"Error init_config_with_default_values, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
@@ -67,12 +67,12 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             str_positions = self.array_to_string_for_db(new_positions)
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set positions = {str_positions}, where config_suffix={str_config};"
+            query = f"update bot_params set positions = {str_positions} where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
-            self.logger.info("Error in update operation, query = {query}", error)
+            self.logger.info(f"Error save_positions_to_config, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
@@ -80,12 +80,12 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         try:
             str_districts = self.array_to_string_for_db(new_districts)
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set districts = {str_districts}, where config_suffix={str_config};"
+            query = f"update bot_params set districts = {str_districts} where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
-            self.logger.info("Error in update operation", error)
+            self.logger.info(f"Error save_districts_to_config, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
@@ -98,7 +98,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
-            self.logger.info("Error in update operation", error)
+            self.logger.info(f"Error save_reports_to_config, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
@@ -107,12 +107,12 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
             connection, cursor = self.open_db()
             str_schedule = self.array_to_string_for_db(new_schedule)
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set schedule = {str_schedule}, where config_suffix={str_config};"
+            query = f"update bot_params set schedule = {str_schedule} where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
         except (Exception, psycopg.Error) as error:
-            self.logger.info("Error in update operation", error)
+            self.logger.info(f"Error save_schedule_to_config, query = {query}", error)
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
