@@ -26,13 +26,16 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
                 result = cursor.fetchall()[0]
                 self.logger.info(f"get_values_from_config result = {result}")
                 positions = self.string_from_db_to_array(result[0])
+                positions.sort()
                 districts = self.string_from_db_to_array(result[1])
+                districts.sort()
                 emails = self.string_from_db_to_array(result[2])
                 send_email = result[3]
                 send_full_report = result[4]
                 schedule = self.string_from_db_to_array(result[5])
-                self.logger.info(f"get_values_from_config values_result = {positions}, {districts}, {emails}, {send_email}, {send_full_report}, {schedule}")
-                return positions, districts, emails, send_email, send_full_report, schedule
+                benefit_federal = result[6]
+                self.logger.info(f"get_values_from_config values_result = {positions}, {districts}, {emails}, {send_email}, {send_full_report}, {schedule}, {benefit_federal}")
+                return positions, districts, emails, send_email, send_full_report, schedule, benefit_federal
             else:
                 self.close_db(connection=connection, cursor=cursor)
                 self.init_config_with_default_values(config_suffix)
@@ -42,7 +45,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
-        return self.default_positions, self.default_districts, [], False, True, self.default_schedule
+        return self.default_positions, self.default_districts, [], False, True, self.default_schedule, True
 
     def init_config_with_default_values(self, config_suffix):
         try:
@@ -88,11 +91,11 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
-    def save_reports_to_config(self, config_suffix, new_email, new_send_email, new_send_full_report):
+    def save_reports_to_config(self, config_suffix, new_email, new_send_email):
         try:
             str_emails = self.array_to_string_for_db([new_email])
             str_config = self.string_to_string_for_db(config_suffix)
-            query = f"update bot_params set email = {str_emails}, send_email = {new_send_email}, send_full_report = {new_send_full_report} where config_suffix={str_config};"
+            query = f"update bot_params set email = {str_emails}, send_email = {new_send_email} where config_suffix={str_config};"
 
             connection, cursor = self.open_db()
             self.execute_update(connection=connection, cursor=cursor, query=query)
@@ -101,10 +104,10 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
-    def save_schedule_to_config(self, config_suffix, new_schedule):
+    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check):
         try:
             connection, cursor = self.open_db()
-            str_schedule = self.array_to_string_for_db(new_schedule)
+            str_schedule = self.array_to_string_for_db(new_schedule_days)
             str_config = self.string_to_string_for_db(config_suffix)
             query = f"update bot_params set schedule = {str_schedule} where config_suffix={str_config};"
 

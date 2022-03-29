@@ -19,6 +19,24 @@ logger = logging.getLogger(__name__)
 global_chat_id = 0
 global_heroku_run = False
 
+
+def set_long_operation_flag(context: CallbackContext):
+    user_data = context.user_data
+    user_data[LONG_OPERATIONS_RUNNING] = True
+
+
+def clear_long_operation_flag(context: CallbackContext):
+    user_data = context.user_data
+    user_data[LONG_OPERATIONS_RUNNING] = False
+
+
+def is_long_operation_flag(context: CallbackContext) -> bool:
+    user_data = context.user_data
+    if context.user_data.get(LONG_OPERATIONS_RUNNING):
+        return user_data[LONG_OPERATIONS_RUNNING]
+    return False
+
+
 def get_config_parser(chat_id):
     config_fabric = DiabetParamsFabric(global_heroku_run, logger, chat_id)
     return config_fabric.get_config_worker()
@@ -52,9 +70,15 @@ def start_edit_positions_remove(update: Update, _) -> int:
     return TYPING_FOR_REMOVE_POSITIONS
 
 
-def start_edit_reports_email(update: Update, _) -> int:
+def start_edit_reports_email(update: Update, context: CallbackContext) -> int:
     logger.info("start_edit_reports_email")
-    update_callback_answer(update=update, text=TEXT_INPUT_EMAIL)
+
+    delete_messages(update=update, context=context)
+    if context.user_data.get(START_OVER):
+        update_callback_answer(update=update, text=TEXT_INPUT_ERROR_EMAIL)
+    else:
+        update_callback_answer(update=update, text=TEXT_INPUT_EMAIL)
+
     return TYPING_FOR_SET_EMAIL
 
 
@@ -75,8 +99,13 @@ def save_remove_positions_input(update: Update, context: CallbackContext) -> int
     list_for_removing = clear_list_for_edit(update.message.text)
 
     for position_removing in list_for_removing:
-        if position_removing in user_data[POSITIONS]:
-            user_data[POSITIONS].remove(position_removing)
+        index_for_remove = -1
+        for index, positions in enumerate(user_data[POSITIONS]):
+            if position_removing.lower() == positions.lower():
+                index_for_remove = index
+                break
+        if index_for_remove != -1:
+            user_data[POSITIONS].pop(index_for_remove)
 
     user_data[START_OVER] = True
     return show_menu_positions_settings(update, context)
@@ -85,12 +114,22 @@ def save_remove_positions_input(update: Update, context: CallbackContext) -> int
 def save_email_input(update: Update, context: CallbackContext) -> int:
     logger.info("save_email_input")
     user_data = context.user_data
-    user_data[EMAIL] = update.message.text
-    return show_menu_reports_settings(update, context)
+    delete_messages(update=update, context=context)
+    user_data[MESSAGES_FOR_REMOVE] = update.message.reply_text(text=TEXT_INPUT_CHECK_EMAIL, parse_mode=telegram.ParseMode.HTML)
+    if check_email_address(update.message.text):
+        user_data[EMAIL] = update.message.text
+        user_data[START_OVER] = True
+        return show_menu_reports_settings(update, context)
+    else:
+        user_data[START_OVER] = True
+        return start_edit_reports_email(update=update, context=context)
 
 
 def start(update: Update, context: CallbackContext):
     logger.info("start")
+    if is_long_operation_flag(context):
+        return RUN_START
+
     global global_chat_id
     global_chat_id = update.effective_chat.id
 
@@ -104,10 +143,9 @@ def start(update: Update, context: CallbackContext):
     ]
     keyboard = InlineKeyboardMarkup(buttons)
 
+    delete_messages(update=update, context=context)
+
     if context.user_data.get(START_OVER) and update.callback_query:
-        chat_id = update.effective_chat.id
-        for message in context.user_data.get(MESSAGES_FOR_REMOVE):
-            context.bot.delete_message(chat_id=chat_id, message_id=message.message_id)
         update_callback_answer_with_keyboard(update=update, text=TEXT_FOR_MAIN_HELLO, keyboard=keyboard)
     else:
         update.message.reply_text(text=TEXT_FOR_MAIN_HELLO, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
@@ -131,11 +169,16 @@ def show_menu_settings(update: Update, context: CallbackContext):
                                  callback_data=str(SHOW_MENU_DISTRICTS_SETTINGS))
         ],
         [
-            InlineKeyboardButton(text=f"{REPORT_ICON} {TEXT_REPORTS}", callback_data=str(SHOW_MENU_REPORTS_SETTINGS))
+            InlineKeyboardButton(text=f"{MAIL_SETTINGS_ICON} {TEXT_EMAIL_SETTINS}",
+                                 callback_data=str(SHOW_MENU_EMAIL_SETTINGS))
         ],
         [
             InlineKeyboardButton(text=f"{SCHEDULE_ICON} {TEXT_SCHEDULE}",
                                  callback_data=str(SHOW_MENU_SCHEDULE_SETTINGS))
+        ],
+        [
+            InlineKeyboardButton(text=f"{ADDITIONAL_SETTINGS_ICON} {TEXT_ADDITIONAL_SETTINGS}",
+                                 callback_data=str(SHOW_MENU_ADDITIONAL_SETTINGS))
         ],
         [
             InlineKeyboardButton(text=f"{SHOW_SETTINGS_ICON} {TEXT_SHOW_SETTINGS}",
@@ -162,7 +205,7 @@ def show_menu_positions_settings(update: Update, context: CallbackContext):
     buttons = [
         [
             InlineKeyboardButton(text=f"{ADD_POSITIONS_ICON} {TEXT_ADD}", callback_data=str(START_EDIT_POSITIONS_ADD)),
-            InlineKeyboardButton(text=f"{REMOVE_POSITIONS_ICON} {TEXT_REMOVE}",
+            InlineKeyboardButton(text=f"{RED_CROSS_ICON} {TEXT_REMOVE}",
                                  callback_data=str(START_EDIT_POSITIONS_REMOVE))
         ],
         [
@@ -172,12 +215,16 @@ def show_menu_positions_settings(update: Update, context: CallbackContext):
     ]
     keyboard = InlineKeyboardMarkup(buttons)
 
-    text = "Препараты для проверки. Сейчас заданы: {0}".format(", ".join(positions))
+    if len(positions):
+        text = "Препараты для проверки. Сейчас заданы: {0}".format(", ".join(positions))
+    else:
+        text = "Препараты для проверки. Сейчас не задано ни одного."
     if (context.user_data.get(START_OVER) or not update.message) and update.callback_query:
         update_callback_answer_with_keyboard(update=update, text=text, keyboard=keyboard)
     else:
         update.message.reply_text(text=text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
 
+    clear_long_operation_flag(context = context)
     return START_EDIT_POSITIONS
 
 
@@ -191,16 +238,46 @@ def show_menu_districts_settings(update: Update, context: CallbackContext):
     config_parser = get_config_parser(chat_id)
 
     buttons = []
-    for default_district in config_parser.default_districts:
+    is_all_checked = True
+    is_all_unchecked = True
+    for default_district in DEFAULT_DISTRICTS:
         if config_parser.check_default_district_in_settings(default_district, districts):
             mark = PLUS_MARK_ICON
+            is_all_unchecked = False
         else:
-            mark = MINUS_MARK_ICON
+            mark = RED_CROSS_ICON
+            is_all_checked = False
 
         clear_district_name = default_district.replace(" район", "").title()
         text = f"        {mark} {clear_district_name}"
         buttons.append([InlineKeyboardButton(text=text,
                                              callback_data=str(SET_DISTRICTS_CHECK) + "_" + clear_district_name)])
+
+    if not is_all_checked and not is_all_unchecked:
+        buttons.append(
+            [
+                InlineKeyboardButton(text=f"{SELECT_ALL_ICON} {SELECT_ALL_ICON} {TEXT_SELECT_ALL}",
+                                     callback_data=str(CHECK_ALL_DISTRICTS)),
+                InlineKeyboardButton(text=f"{UNSELECT_ALL_ICON} {UNSELECT_ALL_ICON} {TEXT_UNSELECT_ALL}",
+                                     callback_data=str(UNCHECK_ALL_DISTRICTS))
+            ]
+        )
+    else:
+        if not is_all_checked:
+            buttons.append(
+                [
+                    InlineKeyboardButton(text=f"{SELECT_ALL_ICON} {SELECT_ALL_ICON} {TEXT_SELECT_ALL}",
+                                         callback_data=str(CHECK_ALL_DISTRICTS))
+                ]
+            )
+        if not is_all_unchecked:
+            buttons.append(
+                [
+                    InlineKeyboardButton(text=f"{UNSELECT_ALL_ICON} {UNSELECT_ALL_ICON} {TEXT_UNSELECT_ALL}",
+                                         callback_data=str(UNCHECK_ALL_DISTRICTS))
+                ]
+            )
+
     buttons.append([InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_DISTRICTS_SETTINGS)),
                     get_back_button()])
 
@@ -212,14 +289,26 @@ def show_menu_districts_settings(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(text=text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
 
+    clear_long_operation_flag(context=context)
     return START_EDIT_DISTRICTS
+
+
+def delete_messages(update: Update, context: CallbackContext):
+    if context.user_data.get(MESSAGES_FOR_REMOVE):
+        chat_id = update.effective_chat.id
+        messages = context.user_data.get(MESSAGES_FOR_REMOVE)
+        if isinstance(messages, list):
+            for message in context.user_data.get(MESSAGES_FOR_REMOVE):
+                context.bot.delete_message(chat_id=str(chat_id), message_id=message.message_id)
+        else:
+            context.bot.delete_message(chat_id=str(chat_id), message_id=messages.message_id)
+        context.user_data[MESSAGES_FOR_REMOVE] = []
 
 
 def show_menu_reports_settings(update: Update, context: CallbackContext):
     logger.info("email_settings")
     email = context.user_data[EMAIL]
     email_send = context.user_data[SEND_EMAIL]
-    full_report_send = context.user_data[SEND_FULL_REPORT]
 
     text_for_menu = TEXT_MENU_REPORTS
 
@@ -229,7 +318,6 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
         text_for_menu += f"Сейчас e-mail не задан\n"
 
     mark_email = get_mark_icon(email_send)
-    mark_full_report = get_mark_icon(full_report_send)
 
     buttons = [
         [
@@ -240,11 +328,56 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
                                  callback_data=str(SET_REPORTS_SEND_EMAIL_CHECK))
         ],
         [
+            InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_REPORTS_SETTINGS)),
+            get_back_button(),
+        ],
+    ]
+    keyboard = InlineKeyboardMarkup(buttons)
+
+    delete_messages(update=update, context=context)
+    if (context.user_data.get(START_OVER) or not update.message) and update.callback_query:
+        update_callback_answer_with_keyboard(update=update, text=text_for_menu, keyboard=keyboard)
+    else:
+        update.message.reply_text(text_for_menu, reply_markup=keyboard)
+
+    user_data = context.user_data
+    user_data[START_OVER] = False
+
+    clear_long_operation_flag(context=context)
+    return START_EDIT_REPORTS
+
+
+def show_menu_additional_settings(update: Update, context: CallbackContext):
+    logger.info("show_menu_additional_settings")
+    full_report_send = context.user_data[SEND_FULL_REPORT]
+    benefit_federal = context.user_data[BENEFIT_FEDERAL]
+
+    text_for_menu = TEXT_MENU_ADDITIONAL_SETTINGS
+
+    if benefit_federal:
+        mark_federal = CHECKED_RADIO_BUTTON_ICON
+        mark_regional = EMPTY_RADIO_BUTTON_ICON
+    else:
+        mark_federal = EMPTY_RADIO_BUTTON_ICON
+        mark_regional = CHECKED_RADIO_BUTTON_ICON
+
+    mark_full_report = get_mark_icon(full_report_send)
+
+    buttons = [
+        [
             InlineKeyboardButton(text=f"{mark_full_report} {TEXT_FULL_REPORT}",
-                                 callback_data=str(SET_REPORTS_SEND_FULL_REPORT_CHECK))
+                                 callback_data=str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
         ],
         [
-            InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_REPORTS_SETTINGS)),
+            InlineKeyboardButton(text=f"{mark_federal} {TEXT_BENEFIT_FEDERAL}",
+                                 callback_data=str(SET_BENEFIT_FEDERAL_CHECK)),
+        ],
+        [
+            InlineKeyboardButton(text=f"{mark_regional} {TEXT_BENEFIT_REGIONAL}",
+                                 callback_data=str(SET_BENEFIT_REGIONAL_CHECK))
+        ],
+        [
+            InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_ADDITIONAL_SETTINGS)),
             get_back_button(),
         ],
     ]
@@ -255,52 +388,57 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(text_for_menu, reply_markup=keyboard)
 
-    return START_EDIT_REPORTS
+    clear_long_operation_flag(context=context)
+    return START_EDIT_ADDITIONAL_SETTINGS
 
 
 def show_menu_schedule_settings(update: Update, context: CallbackContext):
-    schedule = context.user_data[SCHEDULE]
-    logger.info(f"schedule_settings, schedule = {schedule}")
+    logger.info(f"show_menu_schedule_settings")
+    schedule_days = context.user_data[SCHEDULE_DAYS]
+    schedule_hours = context.user_data[SCHEDULE_HOURS]
+    schedule_check = context.user_data[SCHEDULE_CHECK]
 
+    if schedule_check:
+        mark_check = PLUS_MARK_ICON
+    else:
+        mark_check = RED_CROSS_ICON
+
+    is_hours_and_days_set = is_shedule_on(schedule_hours) and is_shedule_on(schedule_days)
     buttons = [
         [
-            InlineKeyboardButton(text=f"{SCHEDULE_EVERY_HOUR_ICON} {TEXT_EVERY_HOUR}",
-                                 callback_data=str(SET_SCHEDULE_EVERY_HOUR_CHECK)),
+            InlineKeyboardButton(text=f"{SCHEDULE_MENU_CHANGE_DAYS_ICON} {TEXT_MENU_SETTINGS_DAYS}",
+                                 callback_data=str(SHOW_MENU_SCHEDULE_DAYS_SETTINGS)),
         ],
         [
-            InlineKeyboardButton(text=f"{SCHEDULE_EVERY_TWO_HOURS_ICON} {TEXT_EVERY_TWO_HOURS}",
-                                 callback_data=str(SET_SCHEDULE_EVERY_TWO_HOURS_CHECK)),
+            InlineKeyboardButton(text=f"{SCHEDULE_MENU_CHANGE_HOURS_ICON} {TEXT_MENU_SETTINGS_HOURS}",
+                                 callback_data=str(SHOW_MENU_SCHEDULE_HOURS_SETTINGS)),
         ],
-        [
-            InlineKeyboardButton(text=f"{SCHEDULE_EVERY_THREE_HOURS_ICON} {TEXT_EVERY_THREE_HOURS}",
-                                 callback_data=str(SET_SCHEDULE_EVERY_THREE_HOURS_CHECK)),
-        ],
-        [
-            InlineKeyboardButton(text=f"{SCHEDULE_EVERY_SIX_HOURS_ICON} {TEXT_EVERY_SIX_HOURS}",
-                                 callback_data=str(SET_SCHEDULE_EVERY_SIX_HOURS_CHECK)),
-        ],
-        [
-            InlineKeyboardButton(text=f"{SCHEDULE_EVERY_HOUR_ICON_SETTINGS} {TEXT_CHOOSE_HOURS}",
-                                 callback_data=str(START_EDIT_EVERY_HOUR_CHECK)),
-        ],
-        [
-            InlineKeyboardButton(text=f"{SCHEDULE_OFF_ICON} {TEXT_OFFCHECK}",
-                                 callback_data=str(SET_SCHEDULE_OFF_CHECK)),
-        ],
+    ]
+    if is_hours_and_days_set:
+        buttons.append(
+            [
+                InlineKeyboardButton(text=f"{mark_check} {TEXT_SCHEDULE_CHECK}",
+                                     callback_data=str(SET_SCHEDULE_CHECK)),
+            ]
+        )
+    buttons.append(
         [
             InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_SCHEDULE_SETTINGS)),
             get_back_button(),
-        ],
-    ]
+        ]
+    )
     keyboard = InlineKeyboardMarkup(buttons)
 
-    text_current_schedule = schedule_settings_to_string(schedule)
+    text = f"<b>{TEXT_SETTINGS_SCHEDULE} настроено так:</b>\n{schedule_to_string(schedule_days=schedule_days, schedule_hours=schedule_hours, schedule_check=schedule_check, print_header=False)}"
+    if not is_hours_and_days_set:
+        text += f"<i>{TEXT_INFO_MUST_SET_SCHEDULE_SETTINGS}</i>\n\n"
 
-    text = f"{TEXT_SETTINGS_SCHEDULE} {text_current_schedule}"
     if (context.user_data.get(START_OVER) or not update.message) and update.callback_query:
         update_callback_answer_with_keyboard(update=update, text=text, keyboard=keyboard)
     else:
         update.message.reply_text(text=text, reply_markup=keyboard)
+
+    clear_long_operation_flag(context=context)
 
     return START_EDIT_SCHEDULE
 
@@ -308,17 +446,45 @@ def show_menu_schedule_settings(update: Update, context: CallbackContext):
 def start_edit_every_hour_schedule(update: Update, context: CallbackContext):
     logger.info("start_edit_every_hour_schedule")
 
-    schedule = context.user_data[SCHEDULE]
+    schedule = context.user_data[SCHEDULE_HOURS]
 
     buttons = [
-        add_one_line_in_schedule(schedule=schedule, selected_range=range(4)),
-        add_one_line_in_schedule(schedule=schedule, selected_range=range(4, 8)),
-        add_one_line_in_schedule(schedule=schedule, selected_range=range(8, 12)),
-        add_one_line_in_schedule(schedule=schedule, selected_range=range(12, 16)),
-        add_one_line_in_schedule(schedule=schedule, selected_range=range(16, 20)),
-        add_one_line_in_schedule(schedule=schedule, selected_range=range(20, 24)),
-        [get_back_button()]
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(3)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(3, 6)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(6, 9)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(9, 12)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(12, 15)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(15, 18)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(18, 21)),
+        add_one_line_in_schedule_hours(schedule=schedule, selected_range=range(21, 24))
     ]
+
+    if is_shedule_off(schedule):
+        buttons.append(
+            [
+                InlineKeyboardButton(text=f"{SELECT_ALL_ICON} {SELECT_ALL_ICON} {TEXT_SELECT_ALL}",
+                                     callback_data=str(CHECK_ALL_SCHEDULE_HOURS))
+            ])
+    else:
+        numbered_array = [int(i) for i in schedule]
+        numbered_array.sort()
+        if numbered_array != EVERY_HOUR_SCHEDULE:
+            buttons.append(
+                [
+                    InlineKeyboardButton(text=f"{SELECT_ALL_ICON} {SELECT_ALL_ICON} {TEXT_SELECT_ALL}",
+                                         callback_data=str(CHECK_ALL_SCHEDULE_HOURS)),
+                    InlineKeyboardButton(text=f"{UNSELECT_ALL_ICON} {UNSELECT_ALL_ICON} {TEXT_UNSELECT_ALL}",
+                                         callback_data=str(UNCHECK_ALL_SCHEDULE_HOURS))
+                ]
+            )
+        else:
+            buttons.append(
+                [
+                    InlineKeyboardButton(text=f"{UNSELECT_ALL_ICON} {UNSELECT_ALL_ICON} {TEXT_UNSELECT_ALL}",
+                                         callback_data=str(UNCHECK_ALL_SCHEDULE_HOURS))
+                ])
+
+    buttons.append([get_back_button()])
 
     keyboard = InlineKeyboardMarkup(buttons)
 
@@ -327,26 +493,76 @@ def start_edit_every_hour_schedule(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(text=TEXT_CHECK_HOURS, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
 
+    clear_long_operation_flag(context=context)
     return TYPING_FOR_CHECK_SCHEDULE_HOURS
 
 
-def show_current_settings(update: Update, _):
+def start_edit_every_day_schedule(update: Update, context: CallbackContext):
+    logger.info("start_edit_every_day_schedule")
+
+    schedule = context.user_data[SCHEDULE_DAYS]
+
+    buttons = get_days_in_schedule(schedule_days=schedule)
+    if is_shedule_off(schedule):
+        buttons.append(
+            [
+                InlineKeyboardButton(text=f"{SELECT_ALL_ICON} {SELECT_ALL_ICON} {TEXT_SELECT_ALL}",
+                                     callback_data=str(CHECK_ALL_SCHEDULE_DAYS))
+            ])
+    else:
+        numbered_array = [int(i) for i in schedule]
+        numbered_array.sort()
+        if numbered_array != EVERY_DAY_SCHEDULE:
+            buttons.append(
+                [
+                    InlineKeyboardButton(text=f"{SELECT_ALL_ICON} {SELECT_ALL_ICON} {TEXT_SELECT_ALL}",
+                                         callback_data=str(CHECK_ALL_SCHEDULE_DAYS)),
+                    InlineKeyboardButton(text=f"{UNSELECT_ALL_ICON} {UNSELECT_ALL_ICON} {TEXT_UNSELECT_ALL}",
+                                         callback_data=str(UNCHECK_ALL_SCHEDULE_DAYS))
+                ]
+            )
+        else:
+            buttons.append(
+                [
+                    InlineKeyboardButton(text=f"{UNSELECT_ALL_ICON} {UNSELECT_ALL_ICON} {TEXT_UNSELECT_ALL}",
+                                         callback_data=str(UNCHECK_ALL_SCHEDULE_DAYS))
+                ])
+
+    buttons.append([get_back_button()])
+
+    keyboard = InlineKeyboardMarkup(buttons)
+
+    if (context.user_data.get(START_OVER) or not update.message) and update.callback_query:
+        update_callback_answer_with_keyboard(update=update, text=TEXT_CHECK_DAYS, keyboard=keyboard)
+    else:
+        update.message.reply_text(text=TEXT_CHECK_DAYS, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
+
+    clear_long_operation_flag(context=context)
+    return TYPING_FOR_CHECK_SCHEDULE_DAYS
+
+
+def show_current_settings(update: Update, context:CallbackContext):
     logger.info("show_settings")
     chat_id = update.effective_chat.id
 
     config_parser = get_config_parser(chat_id)
-    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
+    positions, districts, emails, send_email, send_full_report, schedule_hours, schedule_days, schedule_check, benefit_federal = config_parser.get_values_from_config(
+        chat_id)
 
-    str_positions = ", ".join(positions)
-    message_text = f"{POSITIONS_ICON} <b>{TEXT_POSITIONS}:</b>\n\n        {str_positions}\n\n"
+    if len(positions):
+        str_positions = ", ".join(positions)
+        message_text = f"{POSITIONS_ICON} <b>{TEXT_POSITIONS}:</b>\n\n        {str_positions}\n\n"
+    else:
+        message_text = f"{POSITIONS_ICON} <b>{TEXT_POSITIONS}:</b> {TEXT_NOT_SET}ы\n\n"
 
-    message_text += f"{DISTRICTS_ICON} <b>{TEXT_DISTRICTS}:</b>\n\n"
-    for default_district in config_parser.default_districts:
-        message_text += "        {0} {1}\n\n".format(
-            get_mark_icon(config_parser.check_default_district_in_settings(default_district, districts)),
-            default_district)
+    if len(districts):
+        message_text += f"{DISTRICTS_ICON} <b>{TEXT_DISTRICTS}:</b>\n\n"
+        for district in districts:
+            message_text += f"        {district.capitalize()}\n\n"
+    else:
+        message_text = f"{POSITIONS_ICON} <b>{TEXT_POSITIONS}:</b> {TEXT_NOT_SET}ы\n\n"
 
-    message_text += f"{REPORT_ICON} <b>{TEXT_REPORTS}:</b>\n\n"
+    message_text += f"{MAIL_SETTINGS_ICON} <b>{TEXT_EMAIL_SETTINS}:</b>\n\n"
     if not emails or not emails[0]:
         message_text += f"        {EMAIL_ICON} <b>{TEXT_EMAIL}</b>: {TEXT_NOT_SET}\n\n"
     else:
@@ -354,20 +570,32 @@ def show_current_settings(update: Update, _):
         message_text += f"        {EMAIL_ICON} <b>{TEXT_EMAIL}</b>: {str_emails}\n\n"
 
     message_text += "        {0} {1}\n\n".format(get_mark_icon(send_email), TEXT_SENDING_EMAIL)
-    message_text += "        {0} {1}\n\n".format(get_mark_icon(send_full_report), TEXT_FULL_REPORT)
 
-    message_text += f"{SCHEDULE_ICON} <b>{TEXT_SCHEDULE}</b>:\n\n        {schedule_settings_to_string(schedule).capitalize()}"
+    message_text += schedule_to_string(schedule_days=schedule_days, schedule_hours=schedule_hours,
+                                       schedule_check=schedule_check)
+
+    message_text += f"{ADDITIONAL_SETTINGS_ICON} <b>{TEXT_ADDITIONAL_SETTINGS}:</b>\n\n"
+    message_text += "        {0} {1}\n\n".format(get_mark_icon(send_full_report), TEXT_FULL_REPORT)
+    message_text += "        {0} {1}\n\n".format(get_mark_icon(benefit_federal), TEXT_BENEFIT_FEDERAL)
+    message_text += "        {0} {1}\n\n".format(get_mark_icon(not benefit_federal), TEXT_BENEFIT_REGIONAL)
 
     buttons = [[get_back_button()]]
     keyboard = InlineKeyboardMarkup(buttons)
 
     update_callback_answer_with_keyboard(update=update, text=message_text, keyboard=keyboard)
 
+    clear_long_operation_flag(context=context)
+
     return SHOWING_SETTINGS
 
 
 def check(update: Update, context: CallbackContext) -> int:
-    logger.info("check")
+    logger.info(f"check, is_long_operation_flag = {is_long_operation_flag(context)}")
+    if is_long_operation_flag(context):
+        return SHOWING
+    else:
+        set_long_operation_flag(context)
+
     bot = context.bot
     update.callback_query.answer()
     chat_id = update.callback_query.message.chat.id
@@ -378,7 +606,22 @@ def check(update: Update, context: CallbackContext) -> int:
     now = datetime.now()
 
     config_parser = get_config_parser(chat_id)
-    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(chat_id)
+    positions, districts, emails, send_email, send_full_report, schedule_hours, schedule_days, schedule_check, benefit_federal = config_parser.get_values_from_config(
+        chat_id)
+
+    empty_positions = not positions or not len(positions) or not len(positions[0])
+    empty_districts = not districts or not len(districts) or not len(districts[0])
+    if empty_positions or empty_districts:
+        buttons = [[get_restart_check_button()]]
+        keyboard = InlineKeyboardMarkup(buttons)
+        if empty_positions and empty_districts:
+            text = TEXT_EMPTY_POSITIONS_AND_DISTRICTS
+        elif empty_districts:
+            text = TEXT_EMPTY_DISTRICTS
+        else:
+            text = TEXT_EMPTY_POSITIONS
+        update_callback_answer_with_keyboard(update=update, text=text, keyboard=keyboard)
+        return SHOWING
 
     email_string = ""
     if emails and len(emails) and emails[0] and send_email:
@@ -391,12 +634,16 @@ def check(update: Update, context: CallbackContext) -> int:
     table = ""
     new_table = ""
 
+    if benefit_federal:
+        text_benefit = TEXT_BENEFIT_FEDERAL_CHECK
+    else:
+        text_benefit = TEXT_BENEFIT_REGIONAL_CHECK
+
     html_parser = DiabetHtmlReportParser(chat_id)
     for position in positions:
         update.callback_query.edit_message_text(
-            text=f"{TEXT_RECEIVING_DATA}\n    {districts_string}\n\n{email_string}Ищу {position}")
-        logger.info("get_table_for_one_position, {position}, {districts}")
-        table_res, diff_table_res = html_parser.get_table_for_one_position(position, districts)
+            text=f"{TEXT_RECEIVING_DATA} {text_benefit} {TEXT_RECEIVING_DISTRICTS}\n    {districts_string}\n\n{email_string}Ищу {position}")
+        table_res, diff_table_res = html_parser.get_table_for_one_position(position, districts, benefit_federal)
         if table_res:
             table += table_res
         if diff_table_res:
@@ -413,8 +660,8 @@ def check(update: Update, context: CallbackContext) -> int:
 
     media = create_media_for_reports(now=now, send_full_report=send_full_report, full_report_file=full_report_file,
                                      full_report_file_path=full_report_file_path, new_report_file=new_report_file,
-                                     new_report_file_path=new_report_file_path, table=table, new_table=new_table)
-    buttons = [[get_back_button()]]
+                                     new_report_file_path=new_report_file_path)
+    buttons = [[get_restart_check_button()]]
     keyboard = InlineKeyboardMarkup(buttons)
 
     list_messages_for_remove = []
@@ -440,30 +687,55 @@ def check(update: Update, context: CallbackContext) -> int:
     user_data[START_OVER] = True
     user_data[MESSAGES_FOR_REMOVE] = list_messages_for_remove
 
+    clear_long_operation_flag(context=context)
+
     return SHOWING
 
 
 def check_periodic(context: CallbackContext):
     bot = context.bot
     now = datetime.now()
-    logger.info(f"check_periodic, global_chat_id = {global_chat_id}, current_hour = {now.hour}")
+    day_of_week = now.today().weekday()
 
     config_parser = get_config_parser(global_chat_id)
-    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config(
+    positions, districts, emails, send_email, send_full_report, schedule_hours, schedule_days, schedule_check, benefit_federal = config_parser.get_values_from_config(
         global_chat_id)
 
+    logger.info(
+        f"check_periodic, global_chat_id = {global_chat_id}, day_of_week = {day_of_week}, current_hour = {now.hour}, schedule_check={schedule_check}")
+
+    if not schedule_check:
+        return
+
+    if not positions or not len(positions) or not len(positions[0]):
+        return
+
+    is_find_day = False
+    for one_day in schedule_days:
+        if int(one_day) == day_of_week:
+            logger.info(f"check_periodic, day in schedule range")
+            is_find_day = True
+    if not is_find_day:
+        logger.info(f"check_periodic, day {day_of_week} not in schedule range {schedule_days}, exit")
+        return
+
+    if day_of_week not in schedule_days:
+        logger.info(f"check_periodic, day {day_of_week} not in schedule range {schedule_days}, exit")
+        return
+
     is_find_hour = False
-    for one_hour in schedule:
+    for one_hour in schedule_hours:
         if int(one_hour) == now.hour:
             logger.info(f"check_periodic, time in schedule range")
             is_find_hour = True
     if not is_find_hour:
-        logger.info(f"check_periodic, time {now.hour} not in schedule range {schedule}, exit")
+        logger.info(f"check_periodic, time {now.hour} not in schedule range {schedule_hours}, exit")
         return
 
     html_parser = DiabetHtmlReportParser(global_chat_id)
 
-    table, new_table = html_parser.get_tables_from_html_positions(positions=positions, districts=districts)
+    table, new_table = html_parser.get_tables_from_html_positions(positions=positions, districts=districts,
+                                                                  benefit_federal=benefit_federal)
 
     report_sender = DiabetHtmlReportSender(now, global_chat_id)
     full_report_file, full_report_file_path = report_sender.write_report(True, now, table)
@@ -477,11 +749,14 @@ def check_periodic(context: CallbackContext):
     bot.send_media_group(global_chat_id, media=media)
     remove_reports(full_report_file=full_report_file, full_report_file_path=full_report_file_path,
                    new_report_file=new_report_file, new_report_file_path=new_report_file_path)
+
+    clear_long_operation_flag(context=context)
     return END
 
 
-def stop(update: Update, _) -> int:
+def stop(update: Update, context: CallbackContext) -> int:
     logger.info("stop")
+    clear_long_operation_flag(context=context)
     update.message.reply_text(TEXT_BYE)
 
     return END
@@ -490,13 +765,15 @@ def stop(update: Update, _) -> int:
 def return_to_start(update: Update, context: CallbackContext) -> int:
     logger.info("return_to_start")
     context.user_data[START_OVER] = True
+    clear_long_operation_flag(context=context)
     start(update, context)
 
     return END
 
 
-def stop_nested(update: Update, _) -> int:
+def stop_nested(update: Update, context: CallbackContext) -> int:
     logger.info("stop_nested")
+    clear_long_operation_flag(context=context)
     update.message.reply_text(TEXT_BYE)
     return STOPPING
 
@@ -508,6 +785,15 @@ def end_change_settings(update: Update, context: CallbackContext) -> int:
 
 def end_change_schedule_hours(update: Update, context: CallbackContext) -> int:
     logger.info("end_change_schedule_hours")
+
+    context.user_data[START_OVER] = True
+    show_menu_schedule_settings(update, context)
+
+    return START_EDIT_SCHEDULE
+
+
+def end_change_schedule_days(update: Update, context: CallbackContext) -> int:
+    logger.info("end_change_schedule_days")
 
     context.user_data[START_OVER] = True
     show_menu_schedule_settings(update, context)
@@ -530,18 +816,36 @@ def save_reports_settings(update: Update, context: CallbackContext) -> int:
     chat_id = update.callback_query.message.chat.id
 
     config_parser = get_config_parser(chat_id)
-    config_parser.save_reports_to_config(chat_id, context.user_data[EMAIL], context.user_data[SEND_EMAIL],
-                                         context.user_data[SEND_FULL_REPORT])
+    config_parser.save_reports_to_config(chat_id, context.user_data[EMAIL], context.user_data[SEND_EMAIL])
 
     return return_to_main_settings(update=update, context=context)
 
 
 def save_settings_schedule(update: Update, context: CallbackContext) -> int:
-    logger.info("save_settings_schedule")
+    if is_shedule_off(context.user_data[SCHEDULE_HOURS]) or is_shedule_off(context.user_data[SCHEDULE_DAYS]):
+        schedule_check = False
+    else:
+        schedule_check = context.user_data[SCHEDULE_CHECK]
+
+    logger.info(f"save_settings_schedule, context.user_data[SCHEDULE_CHECK] = {context.user_data[SCHEDULE_CHECK]}")
 
     chat_id = update.callback_query.message.chat.id
     config_parser = get_config_parser(chat_id)
-    config_parser.save_schedule_to_config(chat_id, context.user_data[SCHEDULE])
+    config_parser.save_schedule_to_config(config_suffix=chat_id, new_schedule_hours=context.user_data[SCHEDULE_HOURS],
+                                          new_schedule_days=context.user_data[SCHEDULE_DAYS],
+                                          new_schedule_check=schedule_check)
+
+    return return_to_main_settings(update=update, context=context)
+
+
+def save_additional_settings(update: Update, context: CallbackContext) -> int:
+    logger.info("save_additional_settings")
+    chat_id = update.callback_query.message.chat.id
+
+    config_parser = get_config_parser(chat_id)
+    config_parser.save_additional_settings_to_config(config_suffix=chat_id,
+                                                     new_send_full_report=context.user_data[SEND_FULL_REPORT],
+                                                     new_benefit_federal=context.user_data[BENEFIT_FEDERAL])
 
     return return_to_main_settings(update=update, context=context)
 
@@ -557,9 +861,15 @@ def return_to_main_settings(update: Update, context: CallbackContext) -> int:
 
 def set_district_check(update: Update, context: CallbackContext) -> int:
     logger.info("check_district")
+    if is_long_operation_flag(context):
+        return START_EDIT_DISTRICTS
+    else:
+        set_long_operation_flag(context)
 
     checking_district = update.callback_query.data.split("_", 1)[1]
     user_data = context.user_data
+    set_long_operation_flag(context=context)
+
     current_districts = user_data[DISTRICTS]
 
     index_district = -1
@@ -573,23 +883,76 @@ def set_district_check(update: Update, context: CallbackContext) -> int:
     else:
         current_districts.pop(index_district)
 
+    return set_districts_data(update=update, context=context, data_districts=current_districts)
+
+
+def set_check_all_districts(update: Update, context: CallbackContext) -> int:
+    logger.info("set_check_all_districts")
+    if is_long_operation_flag(context):
+        return START_EDIT_DISTRICTS
+    else:
+        set_long_operation_flag(context)
+    return set_districts_data(update=update, context=context, data_districts=DEFAULT_DISTRICTS)
+
+
+def set_uncheck_all_districts(update: Update, context: CallbackContext) -> int:
+    logger.info("set_uncheck_all_districts")
+    if is_long_operation_flag(context):
+        return START_EDIT_DISTRICTS
+    else:
+        set_long_operation_flag(context)
+    return set_districts_data(update=update, context=context, data_districts=[])
+
+
+def set_districts_data(update: Update, context: CallbackContext, data_districts):
+    context.user_data[DISTRICTS] = data_districts.copy()
     context.user_data[START_OVER] = True
-
     show_menu_districts_settings(update, context)
-
     return START_EDIT_DISTRICTS
 
 
 def set_reports_send_email_check(update: Update, context: CallbackContext) -> int:
     logger.info("set_reports_send_email_check")
+    if is_long_operation_flag(context):
+        return START_EDIT_DISTRICTS
     context.user_data[SEND_EMAIL] = not context.user_data[SEND_EMAIL]
     return return_to_showing_menu_reports_settings(update=update, context=context)
 
 
 def set_reports_send_full_report_check(update: Update, context: CallbackContext) -> int:
     logger.info("set_reports_send_full_report_check")
+    if is_long_operation_flag(context):
+        return START_EDIT_REPORTS
+    else:
+        set_long_operation_flag(context)
     context.user_data[SEND_FULL_REPORT] = not context.user_data[SEND_FULL_REPORT]
-    return return_to_showing_menu_reports_settings(update=update, context=context)
+    return return_to_showing_menu_additional_settings(update=update, context=context)
+
+
+def set_benefit_federal_check(update: Update, context: CallbackContext) -> int:
+    logger.info("set_benefit_federal_check")
+    if is_long_operation_flag(context):
+        return START_EDIT_ADDITIONAL_SETTINGS
+    else:
+        set_long_operation_flag(context)
+    context.user_data[BENEFIT_FEDERAL] = True
+    return return_to_showing_menu_additional_settings(update=update, context=context)
+
+
+def set_benefit_regional_check(update: Update, context: CallbackContext) -> int:
+    logger.info("set_benefit_regional_check")
+    if is_long_operation_flag(context):
+        return START_EDIT_ADDITIONAL_SETTINGS
+    else:
+        set_long_operation_flag(context)
+    context.user_data[BENEFIT_FEDERAL] = False
+    return return_to_showing_menu_additional_settings(update=update, context=context)
+
+
+def return_to_showing_menu_additional_settings(update: Update, context: CallbackContext) -> int:
+    context.user_data[START_OVER] = True
+    show_menu_additional_settings(update, context)
+    return START_EDIT_ADDITIONAL_SETTINGS
 
 
 def return_to_showing_menu_reports_settings(update: Update, context: CallbackContext) -> int:
@@ -602,7 +965,7 @@ def check_schedule_hour(update: Update, context: CallbackContext) -> int:
     logger.info("check_schedule_hour")
 
     checking_hour = int(update.callback_query.data.split("_", 1)[1])
-    current_schedule = context.user_data[SCHEDULE]
+    current_schedule = context.user_data[SCHEDULE_HOURS]
 
     index_hour = -1
     for index, current_hour in enumerate(current_schedule):
@@ -611,9 +974,10 @@ def check_schedule_hour(update: Update, context: CallbackContext) -> int:
             break
 
     if index_hour == -1:
-        current_schedule.append(str(checking_hour))
+        current_schedule.append(int(checking_hour))
     else:
         current_schedule.pop(index_hour)
+
     current_schedule.sort()
 
     context.user_data[START_OVER] = True
@@ -622,40 +986,96 @@ def check_schedule_hour(update: Update, context: CallbackContext) -> int:
     return TYPING_FOR_CHECK_SCHEDULE_HOURS
 
 
-def set_schedule_every_one_hour(update: Update, context: CallbackContext) -> int:
-    logger.info("set_schedule_every_one_hour")
-    set_schedule_data(update=update, context=context, data=EVERY_HOUR_SCHEDULE)
-    return START_EDIT_SCHEDULE
+def check_schedule_day(update: Update, context: CallbackContext) -> int:
+    logger.info("check_schedule_day")
 
+    checking_day = int(update.callback_query.data.split("_", 1)[1])
+    current_schedule = context.user_data[SCHEDULE_DAYS]
 
-def set_schedule_every_two_hours(update: Update, context: CallbackContext) -> int:
-    logger.info("set_schedule_every_two_hours")
-    set_schedule_data(update=update, context=context, data=EVERY_TWO_HOURS_SCHEDULE)
-    return START_EDIT_SCHEDULE
+    index_day = -1
+    for index, current_hour in enumerate(current_schedule):
+        if checking_day == int(current_hour):
+            index_day = index
+            break
 
+    if index_day == -1:
+        current_schedule.append(int(checking_day))
+    else:
+        current_schedule.pop(index_day)
+    current_schedule.sort()
 
-def set_schedule_every_three_hours(update: Update, context: CallbackContext) -> int:
-    logger.info("set_schedule_every_three_hours")
-    set_schedule_data(update=update, context=context, data=EVERY_THREE_HOURS_SCHEDULE)
-    return START_EDIT_SCHEDULE
-
-
-def set_schedule_every_six_hours(update: Update, context: CallbackContext) -> int:
-    logger.info("set_schedule_every_six_hours")
-    set_schedule_data(update=update, context=context, data=EVERY_SIX_HOURS_SCHEDULE)
-    return START_EDIT_SCHEDULE
-
-
-def set_schedule_off(update: Update, context: CallbackContext) -> int:
-    logger.info("set_schedule_off")
-    set_schedule_data(update=update, context=context, data=[])
-    return START_EDIT_SCHEDULE
-
-
-def set_schedule_data(update: Update, context: CallbackContext, data):
-    context.user_data[SCHEDULE] = data
     context.user_data[START_OVER] = True
-    show_menu_schedule_settings(update, context)
+    start_edit_every_day_schedule(update, context)
+
+    return TYPING_FOR_CHECK_SCHEDULE_DAYS
+
+
+def set_check_all_schedule_hours(update: Update, context: CallbackContext) -> int:
+    logger.info("set_check_all_schedule_hours")
+    if is_long_operation_flag(context):
+        return START_EDIT_EVERY_HOUR_CHECK
+    else:
+        set_long_operation_flag(context)
+    return set_schedule_hours_data(update=update, context=context, data_hours=EVERY_HOUR_SCHEDULE)
+
+
+def set_uncheck_all_schedule_hours(update: Update, context: CallbackContext) -> int:
+    logger.info("set_uncheck_all_schedule_hours")
+    if is_long_operation_flag(context):
+        return START_EDIT_EVERY_HOUR_CHECK
+    else:
+        set_long_operation_flag(context)
+    return set_schedule_hours_data(update=update, context=context, data_hours=[])
+
+
+def set_check_all_schedule_days(update: Update, context: CallbackContext) -> int:
+    logger.info("set_check_all_schedule_days")
+    if is_long_operation_flag(context):
+        return START_EDIT_EVERY_DAY_CHECK
+    else:
+        set_long_operation_flag(context)
+    return set_schedule_days_data(update=update, context=context, data_days=EVERY_DAY_SCHEDULE)
+
+
+def set_uncheck_all_schedule_days(update: Update, context: CallbackContext) -> int:
+    logger.info("set_uncheck_all_schedule_days")
+    if is_long_operation_flag(context):
+        return START_EDIT_EVERY_DAY_CHECK
+    else:
+        set_long_operation_flag(context)
+    return set_schedule_days_data(update=update, context=context, data_days=[])
+
+
+def set_schedule_every_one_day(update: Update, context: CallbackContext) -> int:
+    logger.info("set_schedule_every_one_day")
+    if is_long_operation_flag(context):
+        return START_EDIT_EVERY_DAY_CHECK
+    else:
+        set_long_operation_flag(context)
+    set_schedule_hours_data(update=update, context=context, data_hours=context.user_data[SCHEDULE_DAYS])
+    return TYPING_FOR_CHECK_SCHEDULE_DAYS
+
+
+def set_schedule_hours_data(update: Update, context: CallbackContext, data_hours):
+    context.user_data[SCHEDULE_HOURS] = data_hours
+    context.user_data[START_OVER] = True
+    start_edit_every_hour_schedule(update, context)
+    return TYPING_FOR_CHECK_SCHEDULE_HOURS
+
+
+def set_schedule_days_data(update: Update, context: CallbackContext, data_days):
+    context.user_data[SCHEDULE_DAYS] = data_days
+    context.user_data[START_OVER] = True
+    start_edit_every_day_schedule(update, context)
+    return TYPING_FOR_CHECK_SCHEDULE_DAYS
+
+
+def set_schedule_check(update: Update, context: CallbackContext) -> int:
+    logger.info("set_schedule_off")
+    context.user_data[SCHEDULE_CHECK] = not context.user_data[SCHEDULE_CHECK]
+    context.user_data[START_OVER] = True
+    show_menu_schedule_settings(update=update, context=context)
+    return START_EDIT_SCHEDULE
 
 
 def save_districts_settings(update: Update, context: CallbackContext) -> int:
@@ -688,7 +1108,6 @@ def main():
         updater = Updater(token=bot_token, use_context=True)
 
     dp = updater.dispatcher
-
     def stop_and_restart():
         updater.stop()
         os.execl(sys.executable, sys.executable, *sys.argv)
@@ -732,13 +1151,13 @@ def main():
         states={
             START_EDIT_DISTRICTS: [
                 CallbackQueryHandler(set_district_check, pattern='^' + str(SET_DISTRICTS_CHECK)),
+                CallbackQueryHandler(set_check_all_districts,
+                                     pattern='^' + str(CHECK_ALL_DISTRICTS) + '$'),
+                CallbackQueryHandler(set_uncheck_all_districts,
+                                     pattern='^' + str(UNCHECK_ALL_DISTRICTS) + '$'),
                 CallbackQueryHandler(save_districts_settings, pattern='^' + str(SAVE_DISTRICTS_SETTINGS) + '$'),
                 CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
-            ],
-            TYPING_FOR_ADD_POSITIONS: [MessageHandler(Filters.text & ~Filters.command, save_add_positions_input),
-                                       CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')],
-            TYPING_FOR_REMOVE_POSITIONS: [MessageHandler(Filters.text & ~Filters.command, save_remove_positions_input),
-                                          CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')]
+            ]
         },
         fallbacks=[
             CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
@@ -750,18 +1169,15 @@ def main():
         }
     )
 
-    reports_settings_conv = ConversationHandler(
+    email_settings_conv = ConversationHandler(
         entry_points=[
-            CallbackQueryHandler(show_menu_reports_settings, pattern='^' + str(SHOW_MENU_REPORTS_SETTINGS) + '$')],
+            CallbackQueryHandler(show_menu_reports_settings, pattern='^' + str(SHOW_MENU_EMAIL_SETTINGS) + '$')],
         states={
             START_EDIT_REPORTS: [
                 CallbackQueryHandler(start_edit_reports_email, pattern='^' + str(START_EDIT_REPORTS_EMAIL) + '$'),
                 CallbackQueryHandler(set_reports_send_email_check, pattern='^' + str(SET_REPORTS_SEND_EMAIL_CHECK)),
-                CallbackQueryHandler(set_reports_send_full_report_check,
-                                     pattern='^' + str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
                 CallbackQueryHandler(save_reports_settings, pattern='^' + str(SAVE_REPORTS_SETTINGS) + '$'),
-                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
-                MessageHandler(Filters.text & ~Filters.command, save_add_positions_input)
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
             ],
             TYPING_FOR_SET_EMAIL: [MessageHandler(Filters.text & ~Filters.command, save_email_input),
                                    CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')]
@@ -781,24 +1197,57 @@ def main():
             CallbackQueryHandler(show_menu_schedule_settings, pattern='^' + str(SHOW_MENU_SCHEDULE_SETTINGS) + '$')],
         states={
             START_EDIT_SCHEDULE: [
-                CallbackQueryHandler(set_schedule_every_one_hour,
-                                     pattern='^' + str(SET_SCHEDULE_EVERY_HOUR_CHECK) + '$'),
-                CallbackQueryHandler(set_schedule_every_two_hours,
-                                     pattern='^' + str(SET_SCHEDULE_EVERY_TWO_HOURS_CHECK) + '$'),
-                CallbackQueryHandler(set_schedule_every_three_hours,
-                                     pattern='^' + str(SET_SCHEDULE_EVERY_THREE_HOURS_CHECK) + '$'),
-                CallbackQueryHandler(set_schedule_every_six_hours,
-                                     pattern='^' + str(SET_SCHEDULE_EVERY_SIX_HOURS_CHECK) + '$'),
-                CallbackQueryHandler(start_edit_every_hour_schedule, pattern='^' + str(START_EDIT_EVERY_HOUR_CHECK)),
-                CallbackQueryHandler(set_schedule_off,
-                                     pattern='^' + str(SET_SCHEDULE_OFF_CHECK) + '$'),
+                CallbackQueryHandler(start_edit_every_hour_schedule,
+                                     pattern='^' + str(SHOW_MENU_SCHEDULE_HOURS_SETTINGS)),
+                CallbackQueryHandler(start_edit_every_day_schedule,
+                                     pattern='^' + str(SHOW_MENU_SCHEDULE_DAYS_SETTINGS)),
+                CallbackQueryHandler(set_schedule_check, pattern='^' + str(SET_SCHEDULE_CHECK) + '$'),
                 CallbackQueryHandler(save_settings_schedule, pattern='^' + str(SAVE_SCHEDULE_SETTINGS) + '$'),
-                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
-                MessageHandler(Filters.text & ~Filters.command, save_add_positions_input)
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
             ],
             TYPING_FOR_CHECK_SCHEDULE_HOURS: [
                 CallbackQueryHandler(check_schedule_hour, pattern='^' + str(CHECK_SCHEDULE_HOUR)),
+                CallbackQueryHandler(set_check_all_schedule_hours,
+                                     pattern='^' + str(CHECK_ALL_SCHEDULE_HOURS) + '$'),
+                CallbackQueryHandler(set_uncheck_all_schedule_hours,
+                                     pattern='^' + str(UNCHECK_ALL_SCHEDULE_HOURS) + '$'),
                 CallbackQueryHandler(end_change_schedule_hours, pattern='^' + str(END) + '$')
+            ],
+            TYPING_FOR_CHECK_SCHEDULE_DAYS: [
+                CallbackQueryHandler(check_schedule_day, pattern='^' + str(CHECK_SCHEDULE_DAY)),
+                CallbackQueryHandler(set_schedule_every_one_day,
+                                     pattern='^' + str(SET_SCHEDULE_EVERY_DAY_CHECK) + '$'),
+                CallbackQueryHandler(set_check_all_schedule_days,
+                                     pattern='^' + str(CHECK_ALL_SCHEDULE_DAYS) + '$'),
+                CallbackQueryHandler(set_uncheck_all_schedule_days,
+                                     pattern='^' + str(UNCHECK_ALL_SCHEDULE_DAYS) + '$'),
+                CallbackQueryHandler(end_change_schedule_days, pattern='^' + str(END) + '$')
+            ]
+        },
+        fallbacks=[
+            CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
+            CommandHandler('stop', stop_nested),
+        ],
+        map_to_parent={
+            END: SHOWING_SETTINGS,
+            STOPPING: STOPPING,
+        }
+    )
+
+    additional_settings_conv = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(show_menu_additional_settings,
+                                 pattern='^' + str(SHOW_MENU_ADDITIONAL_SETTINGS) + '$')],
+        states={
+            START_EDIT_ADDITIONAL_SETTINGS: [
+                CallbackQueryHandler(set_reports_send_full_report_check,
+                                     pattern='^' + str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
+                CallbackQueryHandler(set_benefit_federal_check,
+                                     pattern='^' + str(SET_BENEFIT_FEDERAL_CHECK) + '$'),
+                CallbackQueryHandler(set_benefit_regional_check,
+                                     pattern='^' + str(SET_BENEFIT_REGIONAL_CHECK) + '$'),
+                CallbackQueryHandler(save_additional_settings, pattern='^' + str(SAVE_ADDITIONAL_SETTINGS) + '$'),
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
             ]
         },
         fallbacks=[
@@ -835,14 +1284,16 @@ def main():
                 CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$'),
                 positions_settings_conv,
                 districts_settings_conv,
-                reports_settings_conv,
+                email_settings_conv,
                 schedule_settings_conv,
+                additional_settings_conv,
                 show_settings_conv],
             RUN_MENU_SETTINGS: [
                 positions_settings_conv,
                 districts_settings_conv,
-                reports_settings_conv,
+                email_settings_conv,
                 schedule_settings_conv,
+                additional_settings_conv,
                 show_settings_conv
             ]
         },

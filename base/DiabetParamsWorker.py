@@ -1,19 +1,20 @@
+from telegram_bot.Constants import DEFAULT_DISTRICTS
+
+
 class DiabetParamsWorker:
     def __init__(self, logger, config_suffix=''):
         self.logger = logger
 
         self.default_positions = ["Апидра", "Новорапид", "Туджео", "Левемир", "Хумалог", "Ринфаст", "Ринлиз", "Тресиба",
                                   "Росинсулин", "Фиасп", "Лантус"]
+        self.default_positions.sort()
 
-        self.default_districts = ["Адмиралтейский", "Василеостровский", "Выборгский",
-                                  "Калининский",
-                                  "Кировский", "Колпинский", "Красногвардейский",
-                                  "Красносельский",
-                                  "Кронштадтcкий", "Курортный", "Московский", "Невский",
-                                  "Петроградский", "Петродворцовый", "Приморский", "Пушкинский",
-                                  "Фрунзенский", "Центральный"]
+        self.default_districts = DEFAULT_DISTRICTS
+        self.default_districts.sort()
 
-        self.default_schedule = []
+        self.default_schedule_hours = []
+
+        self.default_schedule_days = []
 
         self.config_suffix = config_suffix
 
@@ -26,10 +27,13 @@ class DiabetParamsWorker:
     def save_districts_to_config(self, config_suffix, new_districts):
         pass
 
-    def save_reports_to_config(self, config_suffix, new_email, new_send_email, new_send_full_report):
+    def save_reports_to_config(self, config_suffix, new_email, new_send_email):
         pass
 
-    def save_schedule_to_config(self, config_suffix, new_schedule):
+    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check):
+        pass
+
+    def save_additional_settings_to_config(self, config_suffix, new_send_full_report, new_benefit_federal):
         pass
 
     @staticmethod

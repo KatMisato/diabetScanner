@@ -9,11 +9,13 @@ def add_header_district_to_table(district):
 
 class DiabetHtmlReportParser:
     def __init__(self, data_suffix=''):
-        self.headers = ["Название", "Адрес", "Федеральная льгота", "Региональная льгота"]
+        self.headers_benefit_federal = ["Название", "Адрес", "Федеральная льгота"]
+
+        self.headers_benefit_regional = ["Название", "Адрес", "Региональная льгота"]
 
         self.headers_diff = ["Название", "Адрес", "Что изменилось"]
 
-        self.base_url = "https://eservice.gu.spb.ru/portalFront/proxy/async?filter={}&operation=getMedicament&ost1=true&ost2=true"
+        self.base_url = "https://eservice.gu.spb.ru/portalFront/proxy/async?filter={}&operation=getMedicament"
 
         self.timeout = 30
 
@@ -27,31 +29,36 @@ class DiabetHtmlReportParser:
 
         self.district_substring = " район"
 
-    def add_district_to_table(self, district):
+    def add_district_to_table(self, district, benefit_federal):
         if self.district_substring in district["name"]:
             district_table = "  <tr id=\"district\"><td>{0}</td></tr>\n  <tr>\n".format(district["name"].strip())
         else:
             district_table = "  <tr id=\"district\"><td>{0} {1}</td></tr>\n  <tr>\n".format(district["name"].strip(),
                                                                                             self.district_substring)
         for pharmacy in district["apothecaries"]:
-            district_table += self.add_pharmacy_to_table(pharmacy)
+            district_table += self.add_pharmacy_to_table(pharmacy, benefit_federal)
         return district_table
 
-    def add_new_district_to_table(self, district):
+    def add_new_district_to_table(self, district, benefit_federal):
         district_table = add_header_district_to_table(district)
         for pharmacy in district["apothecaries"]:
-            district_table += self.add_new_pharmacy_to_table(pharmacy)
+            district_table += self.add_new_pharmacy_to_table(pharmacy, benefit_federal)
         return district_table
 
-    def add_pharmacy_to_table(self, pharmacy):
+    def add_pharmacy_to_table(self, pharmacy, benefit_federal):
         district_table = "  <tr>\n"
-        for pharmacy_column in [pharmacy["name"], self.clear_address(pharmacy["address"]),
-                                pharmacy["ost1"], pharmacy["ost2"]]:
-            district_table += "    <td>{0}</td>\n".format(pharmacy_column.strip())
+        if benefit_federal:
+            for pharmacy_column in [pharmacy["name"], self.clear_address(pharmacy["address"]),
+                                    pharmacy["ost2"]]:
+                district_table += "    <td>{0}</td>\n".format(pharmacy_column.strip())
+        else:
+            for pharmacy_column in [pharmacy["name"], self.clear_address(pharmacy["address"]),
+                                    pharmacy["ost2"]]:
+                district_table += "    <td>{0}</td>\n".format(pharmacy_column.strip())
         district_table += "  </tr>\n"
         return district_table
 
-    def add_new_pharmacy_to_table(self, new_pharmacy):
+    def add_new_pharmacy_to_table(self, new_pharmacy, benefit_federal):
         ost1_new = float(new_pharmacy["ost1"].replace(",", "."))
         ost2_new = float(new_pharmacy["ost2"].replace(",", "."))
 
@@ -60,17 +67,17 @@ class DiabetHtmlReportParser:
             district_table += "    <td>{0}</td>\n".format(pharmacy_column.strip())
 
         district_table += "    <td>"
-        if ost1_new != 0:
+        if ost1_new != 0 and benefit_federal:
             district_table += "Федеральная льгота: {0} ({1}) ".format(ost1_new, new_pharmacy["date"])
 
-        if ost2_new != 0:
+        if ost2_new != 0 and not benefit_federal:
             district_table += "Региональная льгота: {0} ({1})".format(ost2_new, new_pharmacy["date"])
 
         district_table += "</td>\n  </tr>\n"
 
         return district_table
 
-    def add_diff_pharmacy_to_table(self, old_pharmacy, new_pharmacy):
+    def add_diff_pharmacy_to_table(self, old_pharmacy, new_pharmacy, benefit_federal):
         ost1_new = float(new_pharmacy["ost1"].replace(",", "."))
         ost2_new = float(new_pharmacy["ost2"].replace(",", "."))
         ost1_old = float(old_pharmacy["ost1"].replace(",", "."))
@@ -83,11 +90,11 @@ class DiabetHtmlReportParser:
                 district_table += "    <td>{0}</td>\n".format(pharmacy_column.strip())
 
             district_table += "    <td>"
-            if ost1_new != ost1_old:
+            if ost1_new != ost1_old and benefit_federal:
                 district_table += "Федеральная льгота: не было {0} -> {1} ({2}) ".format(old_pharmacy["date"],
                                                                                          ost1_new, new_pharmacy["date"])
 
-            if ost2_new != ost2_old:
+            if ost2_new != ost2_old and not benefit_federal:
                 district_table += "Региональная льгота: не было {0} -> {1} ({2})".format(old_pharmacy["date"],
                                                                                          ost2_new, new_pharmacy["date"])
 
@@ -95,9 +102,12 @@ class DiabetHtmlReportParser:
 
         return district_table
 
-    def get_table_for_one_position(self, name, districts_filter):
+    def get_table_for_one_position(self, name, districts_filter, benefit_federal):
         url = self.base_url.format(request.quote(name)).strip()
-        print("get data for {0}, url = {1} ...".format(name, url))
+        if benefit_federal:
+            url += "&ost1=true"
+        else:
+            url += "&ost2=true"
 
         try:
             if not os.path.isdir(self.json_data_dir):
@@ -136,46 +146,49 @@ class DiabetHtmlReportParser:
                     table_diff = ""
                     for district in result["districts"]:
                         if self.check_district_name(district["name"], districts_filter):
-                            table_result += self.add_district_to_table(district)
+                            table_result += self.add_district_to_table(district, benefit_federal)
 
                             checking_district = self.find_district_in_result(district["id"], previous_result)
                             if checking_district is None:
-                                table_diff += self.add_new_district_to_table(district)
+                                table_diff += self.add_new_district_to_table(district, benefit_federal)
                             else:
                                 table_diff_pharmacy = ""
                                 for pharmacy in district["apothecaries"]:
                                     checking_pharmacy = self.find_pharmacy_in_district(pharmacy["name"],
                                                                                        checking_district)
                                     if checking_pharmacy is None:
-                                        table_diff_pharmacy += self.add_new_pharmacy_to_table(pharmacy)
+                                        table_diff_pharmacy += self.add_new_pharmacy_to_table(pharmacy, benefit_federal)
                                     else:
-                                        table_diff_pharmacy += self.add_diff_pharmacy_to_table(checking_pharmacy, pharmacy)
+                                        table_diff_pharmacy += self.add_diff_pharmacy_to_table(checking_pharmacy, pharmacy, benefit_federal)
 
                                 if table_diff_pharmacy:
                                     table_diff += add_header_district_to_table(district)
                                     table_diff += table_diff_pharmacy
 
                     if table_result:
-                        res_table += self.print_table_headers(result["name"], self.headers) + table_result + "</table>"
-
+                        if benefit_federal:
+                            res_table += self.print_table_headers(result["name"], self.headers_benefit_federal) + table_result + "</table>"
+                        else:
+                            res_table += self.print_table_headers(result["name"],
+                                                                  self.headers_benefit_regional) + table_result + "</table>"
                     if table_diff:
                         data_diff += self.print_table_headers(result["name"],
                                                               self.headers_diff) + table_diff + "</table>"
                 break
             except error.HTTPError as e:
-                print(e.__dict__)
+                print(f"error = {e.__dict__}, url = {url}")
             except error.URLError as e:
-                print(e.__dict__)
+                print(f"error = {e.__dict__}, url = {url}")
             except TimeoutError as e:
-                print(e.__dict__)
+                print(f"error = {e.__dict__}, url = {url}")
 
         return res_table, data_diff
 
-    def get_tables_from_html_positions(self, positions, districts):
+    def get_tables_from_html_positions(self, positions, districts, benefit_federal):
         table = ""
         new_table = ""
         for position in positions:
-            table_res, diff_table_res = self.get_table_for_one_position(position, districts)
+            table_res, diff_table_res = self.get_table_for_one_position(position, districts, benefit_federal)
             if table_res:
                 table += table_res
             if diff_table_res:

@@ -9,11 +9,11 @@ if __name__ == '__main__':
 
     config_fabric = DiabetParamsFabric(False)
     config_parser = config_fabric.get_config_worker()
-    positions, districts, emails, send_email, send_full_report, schedule = config_parser.get_values_from_config()
+    positions, districts, emails, send_email, send_full_report, schedule_hours, schedule_days, benefit_federal = config_parser.get_values_from_config()
 
     html_parser = DiabetHtmlReportParser()
 
-    table, new_table = html_parser.get_tables_from_html_positions(positions=positions, districts=districts)
+    table, new_table = html_parser.get_tables_from_html_positions(positions=positions, districts=districts, benefit_federal=benefit_federal)
 
     report_sender = DiabetHtmlReportSender(now)
     report_sender.write_report(True, now, table)
