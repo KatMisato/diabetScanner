@@ -4,7 +4,7 @@ import telegram
 from telegram import Update, InputMediaDocument, InlineKeyboardButton
 from telegram.ext import CallbackContext
 
-from Constants import *
+from base.Constants import *
 from base.DiabetParamsFabric import DiabetParamsFabric
 from validate_email import validate_email
 
@@ -231,7 +231,7 @@ def get_restart_check_button():
 
 
 def check_email_address(email):
-    res_parse = validate_email(email_address=email, check_format=True, check_blacklist=False, check_dns=False)
+    res_parse = validate_email(email_address=email, check_format=True, check_smtp=False, check_blacklist=False, check_dns=False)
     return res_parse
 
 

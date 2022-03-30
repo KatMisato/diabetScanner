@@ -1,4 +1,4 @@
-from telegram_bot.Constants import DEFAULT_DISTRICTS
+from base.Constants import DEFAULT_DISTRICTS
 
 
 class DiabetParamsWorker:

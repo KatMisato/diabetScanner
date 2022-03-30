@@ -883,8 +883,7 @@ def save_additional_settings(update: Update, context: CallbackContext) -> int:
 
     config_parser = get_config_parser(chat_id)
     config_parser.save_additional_settings_to_config(config_suffix=chat_id,
-                                                     new_send_full_report=context.user_data[SEND_FULL_REPORT],
-                                                     new_benefit_federal=context.user_data[BENEFIT_FEDERAL])
+                                                     new_send_full_report=context.user_data[SEND_FULL_REPORT])
 
     return return_to_main_settings(update=update, context=context)
 
