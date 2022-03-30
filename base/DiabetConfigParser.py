@@ -117,10 +117,15 @@ class DiabetConfigParser(DiabetParamsWorker):
         print(f"{config_object[MAIN_CONFIG_SECTION][SCHEDULE_CHECK]}")
         self.write_config_to_file(config_filename, config_object)
 
-    def save_additional_settings_to_config(self, config_suffix, new_send_full_report, new_benefit_federal):
+    def save_additional_settings_to_config(self, config_suffix, new_send_full_report):
         config_filename = self.get_config_filename(config_suffix)
         config_object = self.read_config_from_file(config_filename)
         config_object[MAIN_CONFIG_SECTION][SEND_FULL_REPORT_SECTION] = str(new_send_full_report)
+        self.write_config_to_file(config_filename, config_object)
+
+    def save_benefits_settings_to_config(self, config_suffix, new_benefit_federal):
+        config_filename = self.get_config_filename(config_suffix)
+        config_object = self.read_config_from_file(config_filename)
         config_object[MAIN_CONFIG_SECTION][BENEFIT_FEDERAL] = str(new_benefit_federal)
         self.write_config_to_file(config_filename, config_object)
 

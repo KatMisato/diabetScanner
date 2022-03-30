@@ -16,8 +16,8 @@ from base.DiabetParamsFabric import DiabetParamsFabric
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-global_chat_id = 0
 global_heroku_run = False
+global_chat_id = 0
 
 
 def set_long_operation_flag(context: CallbackContext):
@@ -115,7 +115,8 @@ def save_email_input(update: Update, context: CallbackContext) -> int:
     logger.info("save_email_input")
     user_data = context.user_data
     delete_messages(update=update, context=context)
-    user_data[MESSAGES_FOR_REMOVE] = update.message.reply_text(text=TEXT_INPUT_CHECK_EMAIL, parse_mode=telegram.ParseMode.HTML)
+    user_data[MESSAGES_FOR_REMOVE] = update.message.reply_text(text=TEXT_INPUT_CHECK_EMAIL,
+                                                               parse_mode=telegram.ParseMode.HTML)
     if check_email_address(update.message.text):
         user_data[EMAIL] = update.message.text
         user_data[START_OVER] = True
@@ -167,6 +168,10 @@ def show_menu_settings(update: Update, context: CallbackContext):
         [
             InlineKeyboardButton(text=f"{DISTRICTS_ICON} {TEXT_DISTRICTS}",
                                  callback_data=str(SHOW_MENU_DISTRICTS_SETTINGS))
+        ],
+        [
+            InlineKeyboardButton(text=f"{BENEFITS_ICON} {TEXT_BENEFITS}",
+                                 callback_data=str(SHOW_MENU_BENEFITS_SETTINGS))
         ],
         [
             InlineKeyboardButton(text=f"{MAIL_SETTINGS_ICON} {TEXT_EMAIL_SETTINS}",
@@ -224,7 +229,7 @@ def show_menu_positions_settings(update: Update, context: CallbackContext):
     else:
         update.message.reply_text(text=text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
 
-    clear_long_operation_flag(context = context)
+    clear_long_operation_flag(context=context)
     return START_EDIT_POSITIONS
 
 
@@ -324,7 +329,7 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
             InlineKeyboardButton(text=f"{EMAIL_ICON} {TEXT_CHANGE_EMAIL}", callback_data=str(START_EDIT_REPORTS_EMAIL)),
         ],
         [
-            InlineKeyboardButton(text=f"{mark_email} {TEXT_SENDING_EMAIL}",
+            InlineKeyboardButton(text=f"{mark_email} {TEXT_SENDING_EMAIL}?",
                                  callback_data=str(SET_REPORTS_SEND_EMAIL_CHECK))
         ],
         [
@@ -347,12 +352,11 @@ def show_menu_reports_settings(update: Update, context: CallbackContext):
     return START_EDIT_REPORTS
 
 
-def show_menu_additional_settings(update: Update, context: CallbackContext):
-    logger.info("show_menu_additional_settings")
-    full_report_send = context.user_data[SEND_FULL_REPORT]
+def show_menu_benefits_settings(update: Update, context: CallbackContext):
+    logger.info("show_menu_benefits_settings")
     benefit_federal = context.user_data[BENEFIT_FEDERAL]
 
-    text_for_menu = TEXT_MENU_ADDITIONAL_SETTINGS
+    text_for_menu = TEXT_MENU_BENEFITS_SETTINGS
 
     if benefit_federal:
         mark_federal = CHECKED_RADIO_BUTTON_ICON
@@ -361,13 +365,7 @@ def show_menu_additional_settings(update: Update, context: CallbackContext):
         mark_federal = EMPTY_RADIO_BUTTON_ICON
         mark_regional = CHECKED_RADIO_BUTTON_ICON
 
-    mark_full_report = get_mark_icon(full_report_send)
-
     buttons = [
-        [
-            InlineKeyboardButton(text=f"{mark_full_report} {TEXT_FULL_REPORT}",
-                                 callback_data=str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
-        ],
         [
             InlineKeyboardButton(text=f"{mark_federal} {TEXT_BENEFIT_FEDERAL}",
                                  callback_data=str(SET_BENEFIT_FEDERAL_CHECK)),
@@ -375,6 +373,36 @@ def show_menu_additional_settings(update: Update, context: CallbackContext):
         [
             InlineKeyboardButton(text=f"{mark_regional} {TEXT_BENEFIT_REGIONAL}",
                                  callback_data=str(SET_BENEFIT_REGIONAL_CHECK))
+        ],
+        [
+            InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_BENEFITS_SETTINGS)),
+            get_back_button(),
+        ],
+    ]
+    keyboard = InlineKeyboardMarkup(buttons)
+
+    if (context.user_data.get(START_OVER) or not update.message) and update.callback_query:
+        update_callback_answer_with_keyboard(update=update, text=text_for_menu, keyboard=keyboard)
+    else:
+        update.message.reply_text(text_for_menu, reply_markup=keyboard)
+
+    clear_long_operation_flag(context=context)
+
+    return START_EDIT_BENEFITS_SETTINGS
+
+
+def show_menu_additional_settings(update: Update, context: CallbackContext):
+    logger.info("show_menu_additional_settings")
+    full_report_send = context.user_data[SEND_FULL_REPORT]
+
+    text_for_menu = TEXT_MENU_ADDITIONAL_SETTINGS
+
+    mark_full_report = get_mark_icon(full_report_send)
+
+    buttons = [
+        [
+            InlineKeyboardButton(text=f"{mark_full_report} {TEXT_FULL_REPORT}",
+                                 callback_data=str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
         ],
         [
             InlineKeyboardButton(text=f"{SAVE_ICON} {TEXT_SAVE}", callback_data=str(SAVE_ADDITIONAL_SETTINGS)),
@@ -541,7 +569,7 @@ def start_edit_every_day_schedule(update: Update, context: CallbackContext):
     return TYPING_FOR_CHECK_SCHEDULE_DAYS
 
 
-def show_current_settings(update: Update, context:CallbackContext):
+def show_current_settings(update: Update, context: CallbackContext):
     logger.info("show_settings")
     chat_id = update.effective_chat.id
 
@@ -591,6 +619,10 @@ def show_current_settings(update: Update, context:CallbackContext):
 
 def check(update: Update, context: CallbackContext) -> int:
     logger.info(f"check, is_long_operation_flag = {is_long_operation_flag(context)}")
+
+    global global_chat_id
+    global_chat_id = update.effective_chat.id
+
     if is_long_operation_flag(context):
         return SHOWING
     else:
@@ -694,6 +726,8 @@ def check(update: Update, context: CallbackContext) -> int:
 
 def check_periodic(context: CallbackContext):
     bot = context.bot
+    context.refresh_data()
+
     now = datetime.now()
     day_of_week = now.today().weekday()
 
@@ -705,9 +739,11 @@ def check_periodic(context: CallbackContext):
         f"check_periodic, global_chat_id = {global_chat_id}, day_of_week = {day_of_week}, current_hour = {now.hour}, schedule_check={schedule_check}")
 
     if not schedule_check:
+        logger.info(f"check_periodic, global_chat_id = {global_chat_id}, schedule_check False, exit")
         return
 
     if not positions or not len(positions) or not len(positions[0]):
+        logger.info(f"check_periodic, global_chat_id = {global_chat_id}, positions empty, exit")
         return
 
     is_find_day = False
@@ -716,10 +752,6 @@ def check_periodic(context: CallbackContext):
             logger.info(f"check_periodic, day in schedule range")
             is_find_day = True
     if not is_find_day:
-        logger.info(f"check_periodic, day {day_of_week} not in schedule range {schedule_days}, exit")
-        return
-
-    if day_of_week not in schedule_days:
         logger.info(f"check_periodic, day {day_of_week} not in schedule range {schedule_days}, exit")
         return
 
@@ -756,6 +788,10 @@ def check_periodic(context: CallbackContext):
 
 def stop(update: Update, context: CallbackContext) -> int:
     logger.info("stop")
+
+    global global_chat_id
+    global_chat_id = update.effective_chat.id
+
     clear_long_operation_flag(context=context)
     update.message.reply_text(TEXT_BYE)
 
@@ -773,6 +809,9 @@ def return_to_start(update: Update, context: CallbackContext) -> int:
 
 def stop_nested(update: Update, context: CallbackContext) -> int:
     logger.info("stop_nested")
+    global global_chat_id
+    global_chat_id = update.effective_chat.id
+
     clear_long_operation_flag(context=context)
     update.message.reply_text(TEXT_BYE)
     return STOPPING
@@ -936,7 +975,7 @@ def set_benefit_federal_check(update: Update, context: CallbackContext) -> int:
     else:
         set_long_operation_flag(context)
     context.user_data[BENEFIT_FEDERAL] = True
-    return return_to_showing_menu_additional_settings(update=update, context=context)
+    return return_to_showing_menu_benefits_settings(update=update, context=context)
 
 
 def set_benefit_regional_check(update: Update, context: CallbackContext) -> int:
@@ -946,7 +985,24 @@ def set_benefit_regional_check(update: Update, context: CallbackContext) -> int:
     else:
         set_long_operation_flag(context)
     context.user_data[BENEFIT_FEDERAL] = False
-    return return_to_showing_menu_additional_settings(update=update, context=context)
+    return return_to_showing_menu_benefits_settings(update=update, context=context)
+
+
+def save_benefits_settings(update: Update, context: CallbackContext) -> int:
+    logger.info("save_benefits_settings")
+    chat_id = update.callback_query.message.chat.id
+
+    config_parser = get_config_parser(chat_id)
+    config_parser.save_benefits_settings_to_config(config_suffix=chat_id,
+                                                   new_benefit_federal=context.user_data[BENEFIT_FEDERAL])
+
+    return return_to_main_settings(update=update, context=context)
+
+
+def return_to_showing_menu_benefits_settings(update: Update, context: CallbackContext) -> int:
+    context.user_data[START_OVER] = True
+    show_menu_benefits_settings(update, context)
+    return START_EDIT_BENEFITS_SETTINGS
 
 
 def return_to_showing_menu_additional_settings(update: Update, context: CallbackContext) -> int:
@@ -1108,6 +1164,7 @@ def main():
         updater = Updater(token=bot_token, use_context=True)
 
     dp = updater.dispatcher
+
     def stop_and_restart():
         updater.stop()
         os.execl(sys.executable, sys.executable, *sys.argv)
@@ -1157,6 +1214,30 @@ def main():
                                      pattern='^' + str(UNCHECK_ALL_DISTRICTS) + '$'),
                 CallbackQueryHandler(save_districts_settings, pattern='^' + str(SAVE_DISTRICTS_SETTINGS) + '$'),
                 CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+            ]
+        },
+        fallbacks=[
+            CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
+            CommandHandler('stop', stop_nested),
+        ],
+        map_to_parent={
+            END: SHOWING_SETTINGS,
+            STOPPING: STOPPING,
+        }
+    )
+
+    benefits_settings_conv = ConversationHandler(
+        entry_points=[
+            CallbackQueryHandler(show_menu_benefits_settings,
+                                 pattern='^' + str(SHOW_MENU_BENEFITS_SETTINGS) + '$')],
+        states={
+            START_EDIT_BENEFITS_SETTINGS: [
+                CallbackQueryHandler(set_benefit_federal_check,
+                                     pattern='^' + str(SET_BENEFIT_FEDERAL_CHECK) + '$'),
+                CallbackQueryHandler(set_benefit_regional_check,
+                                     pattern='^' + str(SET_BENEFIT_REGIONAL_CHECK) + '$'),
+                CallbackQueryHandler(save_benefits_settings, pattern='^' + str(SAVE_BENEFITS_SETTINGS) + '$'),
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
             ]
         },
         fallbacks=[
@@ -1242,10 +1323,6 @@ def main():
             START_EDIT_ADDITIONAL_SETTINGS: [
                 CallbackQueryHandler(set_reports_send_full_report_check,
                                      pattern='^' + str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
-                CallbackQueryHandler(set_benefit_federal_check,
-                                     pattern='^' + str(SET_BENEFIT_FEDERAL_CHECK) + '$'),
-                CallbackQueryHandler(set_benefit_regional_check,
-                                     pattern='^' + str(SET_BENEFIT_REGIONAL_CHECK) + '$'),
                 CallbackQueryHandler(save_additional_settings, pattern='^' + str(SAVE_ADDITIONAL_SETTINGS) + '$'),
                 CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
             ]
@@ -1284,6 +1361,7 @@ def main():
                 CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$'),
                 positions_settings_conv,
                 districts_settings_conv,
+                benefits_settings_conv,
                 email_settings_conv,
                 schedule_settings_conv,
                 additional_settings_conv,
@@ -1291,6 +1369,7 @@ def main():
             RUN_MENU_SETTINGS: [
                 positions_settings_conv,
                 districts_settings_conv,
+                benefits_settings_conv,
                 email_settings_conv,
                 schedule_settings_conv,
                 additional_settings_conv,

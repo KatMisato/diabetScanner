@@ -33,7 +33,10 @@ class DiabetParamsWorker:
     def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check):
         pass
 
-    def save_additional_settings_to_config(self, config_suffix, new_send_full_report, new_benefit_federal):
+    def save_additional_settings_to_config(self, config_suffix, new_send_full_report):
+        pass
+
+    def save_benefits_settings_to_config(self, config_suffix, new_benefit_federal):
         pass
 
     @staticmethod
