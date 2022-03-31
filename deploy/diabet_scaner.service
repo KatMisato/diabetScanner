@@ -1,0 +1,12 @@
+[Unit]
+Description=Diabet scaner service
+
+[Service]
+Restart=always
+WorkingDirectory=/home/diabetScaner
+ExecStart=/usr/bin/python3 /home/diabetScaner/telegram_bot/DiabetScanerBot.py
+StandardError=syslog
+SyslogIdentifier=diabet-scaner
+
+[Install]
+WantedBy=default.target
