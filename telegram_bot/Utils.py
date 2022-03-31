@@ -127,8 +127,10 @@ def is_shedule_off(schedule):
     return not schedule or not len(schedule) or not len(str(schedule[0]))
 
 
-def clear_list_for_edit(new_list, current_list, logger):
+def clear_list_for_edit(new_list, current_list, logger, without_checking):
     try:
+        if without_checking:
+            return new_list.replace(", ", ",").replace(" ,", ",").split(",")
         res_list = []
         cleared_new_list = new_list.replace(", ", ",").replace(" ,", ",").split(",")
         logger.info(f"cleared_new_list = {cleared_new_list}")

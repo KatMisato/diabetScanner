@@ -86,7 +86,7 @@ def save_add_positions_input(update: Update, context: CallbackContext) -> int:
     logger.info("save_add_positions_input")
     user_data = context.user_data
 
-    user_data[POSITIONS] += clear_list_for_edit(new_list=update.message.text, current_list=user_data[POSITIONS], logger=logger)
+    user_data[POSITIONS] += clear_list_for_edit(new_list=update.message.text, current_list=user_data[POSITIONS], logger=logger, without_checking=False)
     user_data[START_OVER] = True
 
     return show_menu_positions_settings(update, context)
@@ -96,7 +96,7 @@ def save_remove_positions_input(update: Update, context: CallbackContext) -> int
     logger.info("save_remove_positions_input")
     user_data = context.user_data
 
-    list_for_removing = clear_list_for_edit(new_list=update.message.text, current_list=user_data[POSITIONS], logger=logger)
+    list_for_removing = clear_list_for_edit(new_list=update.message.text, current_list=user_data[POSITIONS], logger=logger, without_checking=True)
 
     for position_removing in list_for_removing:
         index_for_remove = -1
