@@ -5,8 +5,7 @@ class DiabetParamsWorker:
     def __init__(self, logger, config_suffix=''):
         self.logger = logger
 
-        self.default_positions = ["Апидра", "Новорапид", "Туджео", "Левемир", "Хумалог", "Ринфаст", "Ринлиз", "Тресиба",
-                                  "Росинсулин", "Фиасп", "Лантус"]
+        self.default_positions = []
         self.default_positions.sort()
 
         self.default_districts = DEFAULT_DISTRICTS

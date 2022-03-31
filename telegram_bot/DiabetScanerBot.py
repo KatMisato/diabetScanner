@@ -13,7 +13,7 @@ from base.DiabetHtmlReportParser import DiabetHtmlReportParser
 from base.DiabetHtmlReportSender import DiabetHtmlReportSender
 from base.DiabetParamsFabric import DiabetParamsFabric
 
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO, filename="bot_log.log")
 logger = logging.getLogger(__name__)
 
 global_heroku_run = False
@@ -86,7 +86,7 @@ def save_add_positions_input(update: Update, context: CallbackContext) -> int:
     logger.info("save_add_positions_input")
     user_data = context.user_data
 
-    user_data[POSITIONS] += clear_list_for_edit(update.message.text)
+    user_data[POSITIONS] += clear_list_for_edit(new_list=update.message.text, current_list=user_data[POSITIONS], logger=logger)
     user_data[START_OVER] = True
 
     return show_menu_positions_settings(update, context)
@@ -96,7 +96,7 @@ def save_remove_positions_input(update: Update, context: CallbackContext) -> int
     logger.info("save_remove_positions_input")
     user_data = context.user_data
 
-    list_for_removing = clear_list_for_edit(update.message.text)
+    list_for_removing = clear_list_for_edit(new_list=update.message.text, current_list=user_data[POSITIONS], logger=logger)
 
     for position_removing in list_for_removing:
         index_for_remove = -1
@@ -1184,12 +1184,15 @@ def main():
                                      pattern='^' + str(START_EDIT_POSITIONS_REMOVE) + '$'),
                 CallbackQueryHandler(save_positions_settings, pattern='^' + str(SAVE_POSITIONS_SETTINGS) + '$'),
                 CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
-                MessageHandler(Filters.text & ~Filters.command, save_add_positions_input)
+                MessageHandler(Filters.text & ~Filters.command, save_add_positions_input),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ],
             TYPING_FOR_ADD_POSITIONS: [MessageHandler(Filters.text & ~Filters.command, save_add_positions_input),
-                                       CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')],
+                                       CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                                       CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')],
             TYPING_FOR_REMOVE_POSITIONS: [MessageHandler(Filters.text & ~Filters.command, save_remove_positions_input),
-                                          CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')]
+                                          CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                                          CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')]
         },
         fallbacks=[
             CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
@@ -1213,6 +1216,7 @@ def main():
                                      pattern='^' + str(UNCHECK_ALL_DISTRICTS) + '$'),
                 CallbackQueryHandler(save_districts_settings, pattern='^' + str(SAVE_DISTRICTS_SETTINGS) + '$'),
                 CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ]
         },
         fallbacks=[
@@ -1236,7 +1240,8 @@ def main():
                 CallbackQueryHandler(set_benefit_regional_check,
                                      pattern='^' + str(SET_BENEFIT_REGIONAL_CHECK) + '$'),
                 CallbackQueryHandler(save_benefits_settings, pattern='^' + str(SAVE_BENEFITS_SETTINGS) + '$'),
-                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ]
         },
         fallbacks=[
@@ -1257,10 +1262,12 @@ def main():
                 CallbackQueryHandler(start_edit_reports_email, pattern='^' + str(START_EDIT_REPORTS_EMAIL) + '$'),
                 CallbackQueryHandler(set_reports_send_email_check, pattern='^' + str(SET_REPORTS_SEND_EMAIL_CHECK)),
                 CallbackQueryHandler(save_reports_settings, pattern='^' + str(SAVE_REPORTS_SETTINGS) + '$'),
-                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ],
             TYPING_FOR_SET_EMAIL: [MessageHandler(Filters.text & ~Filters.command, save_email_input),
-                                   CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')]
+                                   CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                                   CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')]
         },
         fallbacks=[
             CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
@@ -1283,7 +1290,8 @@ def main():
                                      pattern='^' + str(SHOW_MENU_SCHEDULE_DAYS_SETTINGS)),
                 CallbackQueryHandler(set_schedule_check, pattern='^' + str(SET_SCHEDULE_CHECK) + '$'),
                 CallbackQueryHandler(save_settings_schedule, pattern='^' + str(SAVE_SCHEDULE_SETTINGS) + '$'),
-                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ],
             TYPING_FOR_CHECK_SCHEDULE_HOURS: [
                 CallbackQueryHandler(check_schedule_hour, pattern='^' + str(CHECK_SCHEDULE_HOUR)),
@@ -1291,7 +1299,8 @@ def main():
                                      pattern='^' + str(CHECK_ALL_SCHEDULE_HOURS) + '$'),
                 CallbackQueryHandler(set_uncheck_all_schedule_hours,
                                      pattern='^' + str(UNCHECK_ALL_SCHEDULE_HOURS) + '$'),
-                CallbackQueryHandler(end_change_schedule_hours, pattern='^' + str(END) + '$')
+                CallbackQueryHandler(end_change_schedule_hours, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ],
             TYPING_FOR_CHECK_SCHEDULE_DAYS: [
                 CallbackQueryHandler(check_schedule_day, pattern='^' + str(CHECK_SCHEDULE_DAY)),
@@ -1301,7 +1310,8 @@ def main():
                                      pattern='^' + str(CHECK_ALL_SCHEDULE_DAYS) + '$'),
                 CallbackQueryHandler(set_uncheck_all_schedule_days,
                                      pattern='^' + str(UNCHECK_ALL_SCHEDULE_DAYS) + '$'),
-                CallbackQueryHandler(end_change_schedule_days, pattern='^' + str(END) + '$')
+                CallbackQueryHandler(end_change_schedule_days, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ]
         },
         fallbacks=[
@@ -1317,13 +1327,15 @@ def main():
     additional_settings_conv = ConversationHandler(
         entry_points=[
             CallbackQueryHandler(show_menu_additional_settings,
-                                 pattern='^' + str(SHOW_MENU_ADDITIONAL_SETTINGS) + '$')],
+                                 pattern='^' + str(SHOW_MENU_ADDITIONAL_SETTINGS) + '$'),
+            CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')],
         states={
             START_EDIT_ADDITIONAL_SETTINGS: [
                 CallbackQueryHandler(set_reports_send_full_report_check,
                                      pattern='^' + str(SET_REPORTS_SEND_FULL_REPORT_CHECK)),
                 CallbackQueryHandler(save_additional_settings, pattern='^' + str(SAVE_ADDITIONAL_SETTINGS) + '$'),
-                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$')
+                CallbackQueryHandler(end_change_settings, pattern='^' + str(END) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ]
         },
         fallbacks=[
@@ -1340,8 +1352,10 @@ def main():
         entry_points=[CallbackQueryHandler(show_current_settings, pattern='^' + str(SHOW_CURRENT_SETTINGS) + '$')],
         states={
             RUN_MENU_SETTINGS: [
-                CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$')],
-            SHOWING_SETTINGS: [CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$')]
+                CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$'),
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')],
+            SHOWING_SETTINGS: [CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
+                               CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')]
         },
         fallbacks=[
             CallbackQueryHandler(return_to_main_settings, pattern='^' + str(END) + '$'),
@@ -1354,7 +1368,8 @@ def main():
     )
 
     main_menu_settings_conv = ConversationHandler(
-        entry_points=[CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$')],
+        entry_points=[CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$'),
+                      CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')],
         states={
             SHOWING_SETTINGS: [
                 CallbackQueryHandler(show_menu_settings, pattern='^' + str(SHOW_MENU_MAIN_SETTINGS) + '$'),
@@ -1364,7 +1379,8 @@ def main():
                 email_settings_conv,
                 schedule_settings_conv,
                 additional_settings_conv,
-                show_settings_conv],
+                show_settings_conv,
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')],
             RUN_MENU_SETTINGS: [
                 positions_settings_conv,
                 districts_settings_conv,
@@ -1372,7 +1388,8 @@ def main():
                 email_settings_conv,
                 schedule_settings_conv,
                 additional_settings_conv,
-                show_settings_conv
+                show_settings_conv,
+                CallbackQueryHandler(start, pattern='^' + str(RUN_START) + '$')
             ]
         },
         fallbacks=[
