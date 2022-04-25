@@ -9,37 +9,6 @@ from base.DiabetParamsFabric import DiabetParamsFabric
 from validate_email import validate_email
 
 
-def update_callback_answer(update: Update, text):
-    try:
-        update.callback_query.answer()
-        if update.callback_query.message.text != text:
-            update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML)
-            return update.callback_query.message.message_id
-    except Exception:
-        if not update.callback_query:
-            if update.message.text != text:
-                return update.message.reply_text(text=text, parse_mode=telegram.ParseMode.HTML).message_id
-        else:
-            if update.callback_query.message.text != text != text:
-                update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML)
-                return update.callback_query.message.message_id
-
-
-def update_callback_answer_with_keyboard(update: Update, text, keyboard):
-    try:
-        update.callback_query.answer()
-        if update.callback_query.message.text != text or update.callback_query.message.reply_markup != keyboard:
-            update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML,
-                                                    reply_markup=keyboard)
-    except Exception:
-        if update.callback_query.message.text != text or update.callback_query.message.reply_markup != keyboard:
-            if update.message:
-                update.message.reply_text(text=text, parse_mode=telegram.ParseMode.HTML, reply_markup=keyboard)
-            else:
-                update.callback_query.edit_message_text(text=text, parse_mode=telegram.ParseMode.HTML,
-                                                        reply_markup=keyboard)
-
-
 def schedule_settings_hours_to_string(schedule_hours):
     if is_shedule_on(schedule_hours):
         numbered_array = [int(i) for i in schedule_hours]
@@ -87,16 +56,11 @@ def schedule_settings_days_to_string(schedule_days):
         return TEXT_NOT_SET + "а"
 
 
-def schedule_to_string(schedule_days, schedule_hours, schedule_check, print_header=True):
+def schedule_to_string(schedule_days, schedule_hours, email_send, emails):
     message_text = ""
     if is_shedule_off(schedule_days) and is_shedule_off(schedule_hours):
-        if print_header:
-            message_text += f"{SCHEDULE_ICON} <b>{TEXT_SCHEDULE}</b>:\n\n        {TEXT_SCHEDULE_OFF}\n\n"
-        else:
-            message_text += f"        {TEXT_SCHEDULE_OFF}\n\n"
+        message_text += f"        {TEXT_SCHEDULE_OFF}\n\n"
     else:
-        if print_header:
-            message_text += f"{SCHEDULE_ICON} <b>{TEXT_SCHEDULE}</b>:\n\n"
         if is_shedule_on(schedule_days):
             message_text += f"        {TEXT_SCHEDULE_DAYS_SELECTED}: {schedule_settings_days_to_string(schedule_days)}\n\n"
         else:
@@ -107,14 +71,13 @@ def schedule_to_string(schedule_days, schedule_hours, schedule_check, print_head
         else:
             message_text += f"        {TEXT_SCHEDULE_HOURS_SELECTED}: {TEXT_NO_PARAMS}ы\n\n"
 
-    if print_header:
-        if schedule_check:
-            mark = PLUS_MARK_ICON
-            text = TEXT_ON.capitalize() + "a"
-        else:
-            mark = RED_CROSS_ICON
-            text = TEXT_OFF.capitalize() + "a"
-        message_text += f"        {mark} {text}\n\n"
+    if not emails or not emails[0]:
+        message_text += f"        {EMAIL_ICON} <b>{TEXT_EMAIL}</b>: {TEXT_NOT_SET}\n\n"
+    else:
+        str_emails = ", ".join(emails)
+        message_text += f"        {EMAIL_ICON} <b>{TEXT_EMAIL}</b>: {str_emails}\n\n"
+
+    message_text += "        {0} {1}\n\n".format(get_mark_icon(email_send), TEXT_SENDING_EMAIL)
 
     return message_text
 
@@ -155,7 +118,7 @@ def fill_data_from_settings(heroku_run: bool, update: Update, context: CallbackC
     config_fabric = DiabetParamsFabric(heroku_run, logger, chat_id)
     config_parser = config_fabric.get_config_worker()
 
-    positions, districts, emails, send_e_mail, send_full_report, schedule_hours, schedule_days, schedule_check, benefit_federal = config_parser.get_values_from_config(
+    positions, districts, emails, send_e_mail, schedule_hours, schedule_days, schedule_check, benefit_federal = config_parser.get_values_from_config(
         chat_id)
     context.user_data[POSITIONS] = positions
     context.user_data[DISTRICTS] = districts
@@ -164,32 +127,18 @@ def fill_data_from_settings(heroku_run: bool, update: Update, context: CallbackC
     else:
         context.user_data[EMAIL] = ''
     context.user_data[SEND_EMAIL] = send_e_mail
-    context.user_data[SEND_FULL_REPORT] = send_full_report
     context.user_data[SCHEDULE_HOURS] = schedule_hours
     context.user_data[SCHEDULE_DAYS] = schedule_days
     context.user_data[SCHEDULE_CHECK] = schedule_check
     context.user_data[BENEFIT_FEDERAL] = benefit_federal
 
 
-def create_media_for_reports(now, send_full_report, full_report_file, full_report_file_path, new_report_file,
-                             new_report_file_path):
-    media = []
-    if send_full_report and full_report_file:
-        media.append(InputMediaDocument(caption="Полный отчет на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
-                                        media=open(full_report_file_path, 'rb')))
-
-    if new_report_file:
-        media.append(InputMediaDocument(caption="Новые позиции на {0}".format(now.strftime("%d.%m.%Y %H:%M:%S")),
-                                        media=open(new_report_file_path, 'rb')))
-    return media
-
-
-def remove_reports(full_report_file, full_report_file_path, new_report_file, new_report_file_path):
-    if full_report_file:
-        os.remove(full_report_file_path)
-
-    if new_report_file:
-        os.remove(new_report_file_path)
+def remove_reports(full_report_file, full_report_file_path):
+    try:
+        if full_report_file:
+            os.remove(full_report_file_path)
+    except Exception as e:
+        print(f"error = {e}")
 
 
 def get_mark_icon(some_bool):
@@ -242,11 +191,12 @@ def get_back_button():
 
 
 def get_restart_check_button():
-    return InlineKeyboardButton(text=f"{RESTART_CHECK_ICON} {TEXT_RESTART_CHECK}", callback_data=str(END))
+    return InlineKeyboardButton(text=f"{RESTART_CHECK_ICON} {TEXT_RESTART_CHECK}", callback_data=str(RUN_CHECK))
 
 
 def check_email_address(email):
-    res_parse = validate_email(email_address=email, check_format=True, check_smtp=False, check_blacklist=False, check_dns=False)
+    res_parse = validate_email(email_address=email, check_format=True, check_smtp=False, check_blacklist=False,
+                               check_dns=False)
     return res_parse
 
 
@@ -261,3 +211,82 @@ def get_chat_id(update, context):
         chat_id = context.bot_data[update.poll.id]
 
     return chat_id
+
+
+def create_text_by_result_array(result_array):
+    result = ""
+
+    count_added_districts = 0
+    for index, position in enumerate(result_array):
+        str_for_district = ""
+        for district_key in position:
+            array_federal = []
+            array_regional = []
+            for district_info in position[district_key]:
+                for district_info_key in district_info:
+                    for pharmacies in district_info[district_info_key]["federal"]:
+                        array_federal += f"{pharmacies}\n"
+
+                    for pharmacies in district_info[district_info_key]["regional"]:
+                        array_regional += f"{pharmacies}\n"
+
+            is_exists_federal = len(array_federal) > 0
+            is_exists_regional = len(array_regional) > 0
+
+            if is_exists_federal or is_exists_regional:
+                str_for_district += f"{district_key}\n\n"
+
+                for federal_pharmacy in array_federal:
+                    str_for_district += federal_pharmacy
+
+                for regional_pharmacy in array_regional:
+                    str_for_district += regional_pharmacy
+        if str_for_district:
+            if count_added_districts == 0:
+                result += f"\n"
+            else:
+                result += f"\n------------------------\n\n"
+            count_added_districts = count_added_districts + 1
+            result += str_for_district
+    return result
+
+
+def get_text_for_results(table, str_array_result, emails, send_email, benefit_federal, schedule_check, for_periodical_check=False):
+    if benefit_federal:
+        str_benefit = TEXT_BENEFIT_FEDERAL_CHECK
+    else:
+        str_benefit = TEXT_BENEFIT_REGIONAL_CHECK
+
+    if table:
+        if emails and len(emails) and emails[0] and send_email:
+            if table:
+                if str_array_result:
+                    if schedule_check:
+                        return f"Результаты отправил на {emails[0]}\nВот что изменилось по {str_benefit}:\n{str_array_result}"
+                    else:
+                        return f"Вот что изменилось по {str_benefit}:\n{str_array_result}"
+                else:
+                    if for_periodical_check:
+                        return ""
+                    else:
+                        return f"Отправил отчет на {emails[0]}\nНовых изменений по {str_benefit} не нашел"
+        else:
+            if str_array_result:
+                return f"Результаты по {str_benefit}:\n{str_array_result}"
+            else:
+                if for_periodical_check:
+                    return ""
+                else:
+                    return f"{TEXT_NEW_NOT_FOUND}"
+    else:
+        if for_periodical_check:
+            return ""
+        else:
+            return f"{TEXT_NOT_FOUND}"
+
+
+def check_value_in_schedule(schedule, value):
+    for one_schedule_value in schedule:
+        if int(one_schedule_value) == int(value):
+            return True
+    return False

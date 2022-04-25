@@ -9,7 +9,6 @@ POSITIONS_SECTION = "POSITIONS"
 DISTRICTS_SECTION = "DISTRICTS"
 EMAIL_SECTION = "E-MAIL"
 SEND_EMAIL_SECTION = "SEND-E-MAIL"
-SEND_FULL_REPORT_SECTION = "SEND-FULL-REPORT"
 SCHEDULE_HOURS_SECTION = "SCHEDULE-HOURS"
 SCHEDULE_DAYS_SECTION = "SCHEDULE-DAYS"
 SCHEDULE_CHECK = "SCHEDULE-CHECK"
@@ -32,7 +31,6 @@ class DiabetConfigParser(DiabetParamsWorker):
         config_positions = self.default_positions
         config_districts = self.default_districts
         config_emails = ""
-        config_send_full_report = True
         config_send_email = False
         config_schedule_hours = self.default_schedule_hours
         config_schedule_days = self.default_schedule_days
@@ -51,7 +49,6 @@ class DiabetConfigParser(DiabetParamsWorker):
                 config_districts.sort()
                 config_emails = self.get_array_section(config_object, EMAIL_SECTION)
                 config_send_email = self.get_boolean_section(config_object, SEND_EMAIL_SECTION, False)
-                config_send_full_report = self.get_boolean_section(config_object, SEND_FULL_REPORT_SECTION, True)
                 config_schedule_hours = self.get_array_section(config_object, SCHEDULE_HOURS_SECTION)
                 config_schedule_days = self.get_array_section(config_object, SCHEDULE_DAYS_SECTION)
                 config_schedule_check = self.get_boolean_section(config_object, SCHEDULE_CHECK, False)
@@ -62,7 +59,7 @@ class DiabetConfigParser(DiabetParamsWorker):
         else:
             self.init_config_with_default_values(config_suffix)
 
-        return config_positions, config_districts, config_emails, config_send_email, config_send_full_report, config_schedule_hours, config_schedule_days, config_schedule_check, config_benefit_federal
+        return config_positions, config_districts, config_emails, config_send_email, config_schedule_hours, config_schedule_days, config_schedule_check, config_benefit_federal
 
     def init_config_with_default_values(self, config_suffix):
         try:
@@ -79,7 +76,6 @@ class DiabetConfigParser(DiabetParamsWorker):
         self.set_array_section(config_object, DISTRICTS_SECTION, self.default_districts)
         self.set_array_section(config_object, EMAIL_SECTION, "")
         self.set_boolean_section(config_object, SEND_EMAIL_SECTION, False)
-        self.set_boolean_section(config_object, SEND_FULL_REPORT_SECTION, True)
         self.set_array_section(config_object, SCHEDULE_HOURS_SECTION, self.default_schedule_hours)
         self.set_array_section(config_object, SCHEDULE_DAYS_SECTION, self.default_schedule_days)
         self.set_boolean_section(config_object, SCHEDULE_CHECK, False)
@@ -106,27 +102,38 @@ class DiabetConfigParser(DiabetParamsWorker):
         config_object[MAIN_CONFIG_SECTION][SEND_EMAIL_SECTION] = str(new_send_email)
         self.write_config_to_file(config_filename, config_object)
 
-    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check):
+    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check, new_email, new_send_email):
         config_filename = self.get_config_filename(config_suffix)
         config_object = self.read_config_from_file(config_filename)
         self.set_array_section(config_object=config_object, section_name=SCHEDULE_HOURS_SECTION,
                                array_value=new_schedule_hours)
         self.set_array_section(config_object=config_object, section_name=SCHEDULE_DAYS_SECTION,
                                array_value=new_schedule_days)
-        config_object[MAIN_CONFIG_SECTION][SCHEDULE_CHECK] = str(new_schedule_check)
+        self.set_boolean_section(config_object=config_object, section_name=SCHEDULE_CHECK, boolean_value=new_schedule_check)
+        self.set_array_section(config_object=config_object, section_name=EMAIL_SECTION, array_value=new_email)
+        self.set_boolean_section(config_object=config_object, section_name=SEND_EMAIL_SECTION, boolean_value=new_send_email)
         print(f"{config_object[MAIN_CONFIG_SECTION][SCHEDULE_CHECK]}")
-        self.write_config_to_file(config_filename, config_object)
-
-    def save_additional_settings_to_config(self, config_suffix, new_send_full_report):
-        config_filename = self.get_config_filename(config_suffix)
-        config_object = self.read_config_from_file(config_filename)
-        config_object[MAIN_CONFIG_SECTION][SEND_FULL_REPORT_SECTION] = str(new_send_full_report)
         self.write_config_to_file(config_filename, config_object)
 
     def save_benefits_settings_to_config(self, config_suffix, new_benefit_federal):
         config_filename = self.get_config_filename(config_suffix)
         config_object = self.read_config_from_file(config_filename)
         config_object[MAIN_CONFIG_SECTION][BENEFIT_FEDERAL] = str(new_benefit_federal)
+        self.write_config_to_file(config_filename, config_object)
+
+    def save_all_to_config(self, config_suffix, config_positions, config_districts, config_emails, config_send_email,
+                           config_schedule_hours, config_schedule_days, config_schedule_check, config_benefit_federal):
+        config_filename = self.get_config_filename(config_suffix)
+        config_object = self.read_config_from_file(config_filename)
+        self.set_array_section(config_object, POSITIONS_SECTION, config_positions)
+        self.set_array_section(config_object, DISTRICTS_SECTION, config_districts)
+        self.set_array_section(config_object, EMAIL_SECTION, config_emails)
+        self.set_boolean_section(config_object, SEND_EMAIL_SECTION, config_send_email)
+        self.set_array_section(config_object, SCHEDULE_HOURS_SECTION, config_schedule_hours)
+        self.set_array_section(config_object, SCHEDULE_DAYS_SECTION, config_schedule_days)
+        self.set_boolean_section(config_object, SCHEDULE_CHECK, config_schedule_check)
+        self.set_boolean_section(config_object, BENEFIT_FEDERAL, config_benefit_federal)
+
         self.write_config_to_file(config_filename, config_object)
 
     @staticmethod
@@ -155,7 +162,10 @@ class DiabetConfigParser(DiabetParamsWorker):
         if not len(array_value):
             config_object[MAIN_CONFIG_SECTION][section_name] = ""
         else:
-            config_object[MAIN_CONFIG_SECTION][section_name] = ", ".join([str(elem) for elem in array_value])
+            if type(array_value) == str:
+                config_object[MAIN_CONFIG_SECTION][section_name] = ", ".join([array_value])
+            else:
+                config_object[MAIN_CONFIG_SECTION][section_name] = ", ".join([str(elem) for elem in array_value])
 
     @staticmethod
     def set_boolean_section(config_object, section_name, boolean_value):

@@ -104,7 +104,7 @@ class DiabetPostgresConfigParser(DiabetParamsWorker):
         finally:
             self.close_db(connection=connection, cursor=cursor)
 
-    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check):
+    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check, new_email, new_send_email):
         try:
             connection, cursor = self.open_db()
             str_schedule = self.array_to_string_for_db(new_schedule_days)

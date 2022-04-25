@@ -3,6 +3,7 @@ from telegram.ext import ConversationHandler
 SETTINGS_ICON = "\U00002699"
 PLUS_MARK_ICON = "\U00002705"
 MINUS_MARK_ICON = "\U00002796"
+FEEDBACK_ICON = "\U0001F41B"
 
 DISTRICTS_ICON = "\U0001F5FA"
 POSITIONS_ICON = "\U0001F48A"
@@ -43,6 +44,9 @@ BYE_ICON = "\U0001F917"
 
 ICON_MONOCLE = "\U0001F9D0"
 
+UP_TRIANGLE_ICON = "\U0001F53C"
+DOWN_TRIANGLE_ICON = "\U0001F53B"
+
 SELECT_ALL_ICON = PLUS_MARK_ICON
 UNSELECT_ALL_ICON = RED_CROSS_ICON
 
@@ -58,7 +62,6 @@ EVERY_DAY_SCHEDULE = list(range(7))
     DISTRICTS,
     EMAIL,
     SEND_EMAIL,
-    SEND_FULL_REPORT,
     SCHEDULE_HOURS,
     SCHEDULE_DAYS,
     SCHEDULE_CHECK,
@@ -66,10 +69,10 @@ EVERY_DAY_SCHEDULE = list(range(7))
     START_OVER,
     MESSAGES_FOR_REMOVE,
     LONG_OPERATIONS_RUNNING
-) = map(chr, range(90, 102))
+) = map(chr, range(90, 101))
 
 # Меню первого уровня
-RUN_CHECK, SHOW_MENU_MAIN_SETTINGS, RUN_START, SELECTING_ACTION = range(4)
+RUN_CHECK, SHOW_MENU_MAIN_SETTINGS, RUN_START, RUN_GET_FEEDBACK, SELECTING_ACTION = range(5)
 
 # State definitions for second level conversation
 RUN_MENU_SETTINGS = range(10, 12)
@@ -88,26 +91,28 @@ SHOW_MENU_POSITIONS_SETTINGS, \
 # State definitions for descriptions conversation
 START_EDIT_POSITIONS_ADD, START_EDIT_POSITIONS_REMOVE, TYPING_FOR_ADD_POSITIONS, TYPING_FOR_REMOVE_POSITIONS, \
     SET_DISTRICTS_CHECK, CHECK_ALL_DISTRICTS, UNCHECK_ALL_DISTRICTS, \
-    TYPING_FOR_SET_EMAIL, SET_REPORTS_SEND_EMAIL_CHECK, SET_REPORTS_SEND_FULL_REPORT_CHECK, \
+    TYPING_FOR_SET_EMAIL, SET_REPORTS_SEND_EMAIL_CHECK, \
+    SET_SCHEDULE_ENABLE_EVERY_HOUR_CHECK, SET_SCHEDULE_ENABLE_SCHEDULE_CHECK, \
     SET_SCHEDULE_EVERY_HOUR_CHECK, SET_SCHEDULE_EVERY_TWO_HOURS_CHECK, SET_SCHEDULE_EVERY_THREE_HOURS_CHECK, \
     SET_SCHEDULE_EVERY_SIX_HOURS_CHECK, START_EDIT_EVERY_HOUR_CHECK, START_EDIT_EVERY_DAY_CHECK, CHECK_ALL_SCHEDULE_HOURS, \
     UNCHECK_ALL_SCHEDULE_HOURS, CHECK_ALL_SCHEDULE_DAYS, UNCHECK_ALL_SCHEDULE_DAYS, \
     SET_SCHEDULE_EVERY_DAY_CHECK, SET_SCHEDULE_CHECK, \
     TYPING_FOR_CHECK_SCHEDULE_HOURS, TYPING_FOR_CHECK_SCHEDULE_DAYS, CHECK_SCHEDULE_HOUR, CHECK_SCHEDULE_DAY, \
-    SET_BENEFIT_FEDERAL_CHECK, SET_BENEFIT_REGIONAL_CHECK = range(40, 68)
+    SET_BENEFIT_FEDERAL_CHECK, SET_BENEFIT_REGIONAL_CHECK, TYPING_FOR_FEEDBACK = range(40, 70)
 
 # Meta states
 STOPPING, SHOWING, SHOWING_SETTINGS, \
     START_EDIT_POSITIONS, SAVE_POSITIONS_SETTINGS, \
     START_EDIT_DISTRICTS, SAVE_DISTRICTS_SETTINGS, \
-    START_EDIT_REPORTS, START_EDIT_REPORTS_EMAIL, SAVE_REPORTS_SETTINGS, \
+    START_EDIT_REPORTS, START_EDIT_REPORTS_EMAIL, \
     START_EDIT_SCHEDULE, SAVE_SCHEDULE_SETTINGS, START_EDIT_BENEFITS_SETTINGS, SAVE_BENEFITS_SETTINGS, \
-    START_EDIT_ADDITIONAL_SETTINGS, SAVE_ADDITIONAL_SETTINGS = range(70, 86)
+    START_EDIT_ADDITIONAL_SETTINGS, SAVE_ALL_SETTINGS = range(80, 95)
 
 END = ConversationHandler.END
 
 TEXT_FOR_MAIN_HELLO = f"Привет {HELLO_ICON}.\nЯ бот для поиска льготных лекарственных препаратов в аптеках СпБ.\n" \
                       f"Работаю с данными офиц. сайта: https://eservice.gu.spb.ru/portalFront/resources/portal.html#medicament\n\n" \
+                      f"По умолчанию я проверяю наличие каждый час и шлю обновления в чат. Если хотите настроить своё время проверки, то воспользуйтесь пунктом «Настраиваемая проверка»\n\n" \
                       "<i>На момент обращения в аптеку не гарантируется наличие лекарственного препарата к выдаче, в связи с " \
                       "ограничением количества препарата в аптеке. Информацию о наличии препарата необходимо уточнить по телефону</i>"
 
@@ -121,9 +126,7 @@ TEXT_BENEFITS = "Льготы"
 
 TEXT_EMAIL_SETTINS = "Рассылка на почту"
 
-TEXT_SCHEDULE = "Авто-проверка"
-
-TEXT_ADDITIONAL_SETTINGS = "Доп настройки"
+TEXT_SCHEDULE = "Настраиваемая проверка"
 
 TEXT_SHOW_SETTINGS = "Показать настройки"
 
@@ -151,9 +154,7 @@ TEXT_REMOVE = "Удалить"
 
 TEXT_CHANGE_EMAIL = "Изменить e-mail"
 
-TEXT_SENDING_EMAIL = "Отправлять на e-mail"
-
-TEXT_FULL_REPORT = "Нужен полный отчет"
+TEXT_SENDING_EMAIL = "Высылать на email"
 
 TEXT_EVERY_HOUR = "Проверять каждый час"
 
@@ -192,7 +193,7 @@ TEXT_NOT_FOUND = f"Я ничего не нашел {THINKING_ICON}. Попроб
 TEXT_NEW_NOT_FOUND = f"Я не нашел ничего нового {THINKING_ICON}. Такое бывает, если препараты не привозили в аптеки."
 
 TEXT_MENU_REPORTS = "Вы можете изменить e-mail, на который будут отправляться отчеты с найденными препаратами.\n" \
-                    "Также можете включить/выключить отправку e-mail.\n"
+                    "Также можете включить/выключить отправку e-mail и выбрать часы и дни проверки\n"
 
 TEXT_BYE = f"Пока {BYE_ICON}"
 
@@ -218,7 +219,7 @@ TEXT_SCHEDULE_DAYS_SELECTED = "Дни"
 
 TEXT_SCHEDULE_HOURS_SELECTED = "Часы"
 
-TEXT_RESTART_CHECK = "Перезапустить поиск"
+TEXT_RESTART_CHECK = "Искать снова"
 
 TEXT_ON = "включен"
 
@@ -248,3 +249,13 @@ TEXT_BENEFIT_REGIONAL_CHECK = "региональной льготе"
 TEXT_BENEFIT_FEDERAL = "Федеральная льгота"
 
 TEXT_BENEFIT_FEDERAL_CHECK = "федеральной льготе"
+
+TEXT_CHECK_TYPE = "Тип проверки"
+
+TEXT_CHECK_TYPE_EVERY_HOUR = "каждый час"
+
+TEXT_CHECK_TYPE_SCHEDULE = "настраиваемая"
+
+TEXT_GET_FEEDBACK = "Сообщить о проблеме"
+
+TEXT_INPUT_FEEDBACK = "Введите описание проблемы"

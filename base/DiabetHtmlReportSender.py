@@ -20,9 +20,7 @@ class DiabetHtmlReportSender:
 
         self.email_password = "Diabet.Scanner1"
 
-        self.full_report_name_template = "report_full_{0}.html"
-
-        self.new_report_name_template = "report_new_{0}.html"
+        self.full_report_name_template = "report_{0}.html"
 
         self.css_style_base = """<style> table {
                   font-family: Arial, Helvetica, sans-serif;
@@ -51,8 +49,6 @@ class DiabetHtmlReportSender:
 
         self.css_style_full = self.css_style_base.replace("bg_color", "#04AA6D")
 
-        self.css_style_new = self.css_style_base.replace("bg_color", "#FF8C00")
-
         self.now_time = now_time
 
         self.reports_dir = "../reports"
@@ -64,7 +60,7 @@ class DiabetHtmlReportSender:
             return self.reports_dir
         return "{0}_{1}".format(self.reports_dir, self.config_suffix)
 
-    def write_report(self, is_full_report, time_now, html_table):
+    def write_report(self, time_now, html_table):
         if not html_table:
             return None, None
 
@@ -75,10 +71,7 @@ class DiabetHtmlReportSender:
             print(os_error)
             return None, None
 
-        if is_full_report:
-            file_name_template = self.full_report_name_template
-        else:
-            file_name_template = self.new_report_name_template
+        file_name_template = self.full_report_name_template
 
         filename = file_name_template.format(self.now_time.strftime("%Y_%m_%d_%H_%M_%S"))
         filepath = os.path.join(self.get_reports_dir(), filename)
@@ -86,56 +79,78 @@ class DiabetHtmlReportSender:
         try:
             with open(filepath, "w", encoding="utf-8") as hs:
                 hs.write(self.header_html)
-                if is_full_report:
-                    hs.write(self.css_style_full)
-                else:
-                    hs.write(self.css_style_new)
+                hs.write(self.css_style_full)
                 hs.writelines(html_table)
                 hs.close()
         except IOError as e:
             print(e.__dict__)
         return filename, filepath
 
-    def send_email(self, receiver_email, html_text, send_full):
-        if not receiver_email:
-            return
-        if (not html_text or not receiver_email) and (send_full is False):
-            return
+    def send_email(self, receiver_email, html_text):
+        try:
+            if not receiver_email:
+                return
+            if (not html_text or not receiver_email):
+                return
 
-        print("send e-mail to {0}".format(receiver_email))
+            print("send e-mail to {0}".format(receiver_email))
 
-        sender_email = self.diabetes_send_email
+            sender_email = self.diabetes_send_email
 
-        formatted_time_str = self.now_time.strftime("%d.%m.%Y %H:%M:%S")
-        message = MIMEMultipart()
-        message["From"] = sender_email
-        message["To"] = receiver_email
-        message["Subject"] = "Наличие препаратов в аптеках на {0}".format(formatted_time_str)
+            formatted_time_str = self.now_time.strftime("%d.%m.%Y %H:%M:%S")
+            message = MIMEMultipart()
+            message["From"] = sender_email
+            message["To"] = receiver_email
+            message["Subject"] = "Наличие препаратов в аптеках на {0}".format(formatted_time_str)
 
-        if html_text:
-            message.attach(MIMEText("Изменения на {0}".format(formatted_time_str), "plain"))
+            message.attach( MIMEText("Отчет на {0} ".format(self.now_time.strftime("%d.%m.%Y %H:%M:%S")), "plain"))
             message.attach(MIMEText(html_text, "html"))
-            part_new = self.add_file_to_html(self.new_report_name_template, self.now_time)
-            message.attach(part_new)
-        else:
-            message.attach(
-                MIMEText("Изменений на {0} нет, к письму приложен полный отчет"
-                         .format(self.now_time.strftime("%d.%m.%Y %H:%M:%S")), "plain"))
-
-        if send_full is True:
             part_full = self.add_file_to_html(self.full_report_name_template, self.now_time)
             message.attach(part_full)
 
-        text = message.as_string()
+            text = message.as_string()
 
-        context = ssl.create_default_context()
-        with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
-            server.login(self.email_login, self.email_password)
-            server.sendmail(sender_email, receiver_email, text)
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+                server.login(self.email_login, self.email_password)
+                server.sendmail(sender_email, receiver_email, text)
+        except Exception as e:
+            print(f"error = {e}")
 
-    def send_emails(self, emails, new_table, send_full_report):
+    def send_email_feedback(self, subject, html_text):
+        try:
+            receiver_email  = self.diabetes_send_email
+
+            if not receiver_email:
+                return
+            if (not html_text or not receiver_email):
+                return
+
+            print("send e-mail to {0}".format(receiver_email))
+
+            sender_email = self.diabetes_send_email
+
+            formatted_time_str = self.now_time.strftime("%d.%m.%Y %H:%M:%S")
+            message = MIMEMultipart()
+            message["From"] = sender_email
+            message["To"] = receiver_email
+            message["Subject"] = "Проблема от {0} ".format(self.now_time.strftime("%d.%m.%Y %H:%M:%S"))
+
+            message.attach(MIMEText("Проблема от {0} ".format(self.now_time.strftime("%d.%m.%Y %H:%M:%S")), "plain"))
+            message.attach(MIMEText(html_text, "html"))
+
+            text = message.as_string()
+
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=context) as server:
+                server.login(self.email_login, self.email_password)
+                server.sendmail(sender_email, receiver_email, text)
+        except Exception as e:
+            print(f"error = {e}")
+
+    def send_emails(self, emails, new_table):
         for email in emails:
-            self.send_email(email, new_table, send_full_report)
+            self.send_email(email, new_table)
 
     def add_file_to_html(self, name_template, now_time):
         filename = name_template.format(now_time.strftime("%Y_%m_%d_%H_%M_%S"))

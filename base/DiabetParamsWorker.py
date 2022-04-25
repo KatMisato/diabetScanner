@@ -29,7 +29,7 @@ class DiabetParamsWorker:
     def save_reports_to_config(self, config_suffix, new_email, new_send_email):
         pass
 
-    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check):
+    def save_schedule_to_config(self, config_suffix, new_schedule_hours, new_schedule_days, new_schedule_check, new_email, new_send_email):
         pass
 
     def save_additional_settings_to_config(self, config_suffix, new_send_full_report):
